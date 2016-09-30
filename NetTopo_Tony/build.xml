@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<project name="NetTopo_Tony" default="pack">
+
+	<!-- properies -->
+	<property name="src.dir" value="src" />
+	<property name="report.dir" value="report" />
+	<property name="classes.dir" value="classes" />
+	<property name="lib.dir" value="lib" />
+	<property name="bin.dir" value="bin" />
+	<property name="doc.dir" value="doc" />
+	<property name="main-class" value="org.deri.nettopo.app.NetTopoApp" />
+	<property name="executable-jar" value="NetTopo.jar" />
+	<property name="manifest-jars" value="../lib/org.eclipse.core.commands_3.2.0.I20060605-1400.jar 
+		../lib/org.eclipse.equinox.common_3.2.0.v20060603.jar 
+		../lib/org.eclipse.jface_3.2.2.M20061214-1200.jar 
+		../lib/org.eclipse.swt.win32.win32.x86_3.2.2.v3236.jar" />
+
+	<!-- Define classpath -->
+	<path id="master-classpath">
+		<fileset file="${lib.dir}/*.jar" />
+		<pathelement path="${classes.dir}" />
+	</path>
+
+	<!-- Initialization -->
+	<target name="init">
+	</target>
+
+	<!-- Compile -->
+	<target name="compile" depends="init" description="compile the source files">
+		<javac srcdir="${src.dir}" destdir="${classes.dir}" target="1.6">
+			<classpath refid="master-classpath" />
+		</javac>
+	</target>
+
+	<!-- Clean -->
+	<target name="clean" depends="compile">
+		<delete file="${bin.dir}/${executable-jar}" />
+	</target>
+
+	<!-- Make jar file -->
+	<target name="pack" depends="clean" description="make .jar file">
+		<jar destfile="${bin.dir}/${executable-jar}" basedir="${classes.dir}">
+			<include name="org/deri/nettopo/" />
+			<exclude name="**/*Test.*" />
+			<exclude name="**/Test*.*" />
+			<manifest>
+				<attribute name="Main-Class" value="${main-class}" />
+				<attribute name="Class-Path" value="${manifest-jars}" />
+			</manifest>
+		</jar>
+	</target>
+
+</project>

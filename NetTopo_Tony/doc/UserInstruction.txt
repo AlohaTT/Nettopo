@@ -1,0 +1,12 @@
+After checking out NetTopo source code, please add the following line
+
+-Djava.library.path=bin
+
+for the vm arguments.
+
+Steps:
+
+1. Click "run"
+2. Find "(x)=arguments"
+3. Find "vm arguments:"
+4. Copy "-Djava.library.path=bin" and paste in it
