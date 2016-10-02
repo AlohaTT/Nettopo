@@ -6,6 +6,7 @@ package org.deri.nettopo.algorithm.sdn;
 import org.deri.nettopo.algorithm.AlgorFunc;
 import org.deri.nettopo.algorithm.Algorithm;
 import org.deri.nettopo.algorithm.sdn.function.SDN_BASED_CKN;
+import org.deri.nettopo.algorithm.sdn.function.SDN_BASED_CKN_MultiThread;
 import org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN;
 import org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread;
 
@@ -22,10 +23,11 @@ public class Algor_SDN implements Algorithm{
 	 */
 	public Algor_SDN() {
 		// TODO Auto-generated constructor stub
-		functions=new AlgorFunc[3];
-		functions[0]=new SDN_BASED_CKN(this);
-		functions[1]=new SDN_CKN_MAIN();
-		functions[2]=new SDN_CKN_MAIN2_MutilThread();
+		functions=new AlgorFunc[4];
+		functions[0]=new SDN_BASED_CKN();
+		functions[1]=new SDN_BASED_CKN_MultiThread();
+		functions[2]=new SDN_CKN_MAIN();
+		functions[3]=new SDN_CKN_MAIN2_MutilThread();
 	}
 	
 

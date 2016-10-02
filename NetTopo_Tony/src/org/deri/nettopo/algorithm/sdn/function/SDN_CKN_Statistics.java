@@ -145,7 +145,7 @@ public class SDN_CKN_Statistics {
 			ckn.runForStatistics();
 			int sleepNum = nodeNum - wsn.getSensorNodesActiveNum();
 			float sleepRate = sleepNum * 1.0f / nodeNum;
-			SDN_CKN_MutilThreadStatisticsMeta meta = new SDN_CKN_MutilThreadStatisticsMeta(k, nodeNum, sleepNum, sleepRate);
+			SDN_CKNStatisticsMeta meta = new SDN_CKNStatisticsMeta(k, nodeNum, sleepNum, sleepRate);
 			System.out.println(meta);
 			if (sleepRate > maxRate) {
 				maxRate = sleepRate;
@@ -160,7 +160,7 @@ public class SDN_CKN_Statistics {
 		}
 
 		double totalAverageSleepRate = totalSleepNum * 1.0f / totalNum;
-		SDN_CKN_MutilThreadStatisticsMeta oneMeta = new SDN_CKN_MutilThreadStatisticsMeta(k, nodeNum, nodeNum * totalAverageSleepRate,
+		SDN_CKNStatisticsMeta oneMeta = new SDN_CKNStatisticsMeta(k, nodeNum, nodeNum * totalAverageSleepRate,
 				totalAverageSleepRate);
 		logWriter.println(oneMeta.toString() + "          " + maxRateStr + "  " + minRateStr);
 		logWriter.flush();
@@ -201,9 +201,9 @@ public class SDN_CKN_Statistics {
 
 	public static void main(String[] args) throws Exception {
 		SDN_CKN_Statistics statistics = new SDN_CKN_Statistics();
-		System.out.println(SDN_CKN_MutilThreadStatisticsMeta.outputHeader());
-		statistics.getLogWriter().println(SDN_CKN_MutilThreadStatisticsMeta.NET_INFO_HEAD());
-		statistics.getLogWriter().println(SDN_CKN_MutilThreadStatisticsMeta.outputHeader());
+		System.out.println(SDN_CKNStatisticsMeta.outputHeader());
+		statistics.getLogWriter().println(SDN_CKNStatisticsMeta.NET_INFO_HEAD());
+		statistics.getLogWriter().println(SDN_CKNStatisticsMeta.outputHeader());
 
 		/*
 		 * i decides the k j*100 decides the nodeNum

@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -57,6 +58,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 	protected static final boolean NEEDINTERVAL = true;// 绘制路线时是否需要时间间隔
 	protected static final long INTERVALTIME = 0;// 绘制路线时的时间间隔
 	protected static final boolean ONEOFF = false;// 是否瞬间出结果
+	private Map<Integer, Integer> hops;
 
 	public SDN_CKN_MAIN2_MutilThread(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -91,7 +93,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
-				+ Arrays.toString(activeSensorNodes));
+				+ Arrays.toString(activeSensorNodes)+"\nhops"+hops.toString());
 		app.getDisplay().asyncExec(new Runnable() {
 			public void run() {
 				NetTopoApp.getApp().refresh();
@@ -353,6 +355,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 
 	private void CKN_Function() {
 		initialWork();
+		hops = Collections.synchronizedMap(new Hashtable<Integer, Integer>());
 		Collection<Integer> nodeNeighborGreaterThanK = getNodeNeighborGreaterThank(
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));// 获得所有邻居节点数大于K的节点
 		controllerID = wsn.getSinkNodeId()[0];
@@ -370,10 +373,11 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 						.IntegerArray2IntArray(getAwakeNeighborsOf2HopsLessThanRanku(currentID));
 				if (atLeast_k_Neighbors(Nu, Cu) && qualifiedConnectedInCu(Cu, awakeNeighborsOf2HopsLessThanRanku)) {
 					initializeAvailable();
+					final List<Integer> path = findOnePath(false, currentID, controllerID);
+					routingPath.put(currentID, path);
+					hops.put(currentID, path.size()-1);
 					pool.execute(new Runnable() {
 						public void run() {
-							List<Integer> path = findOnePath(false, currentID, controllerID);
-							routingPath.put(currentID, path);
 							sendActionPacket(currentID, controllerID, path);
 							try {
 								Thread.sleep(1);
@@ -396,7 +400,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-
+		System.out.println();
 	}
 
 	/**

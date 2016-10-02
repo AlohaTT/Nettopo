@@ -52,6 +52,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 	protected static final boolean NEEDINTERVAL = true;// 绘制路线时是否需要时间间隔
 	protected static final long INTERVALTIME = 0;// 绘制路线时的时间间隔
 	protected static final boolean RETAINPATH = true;// 是否保留路线
+	private HashMap<Integer, Integer> hops;
 
 	public SDN_CKN_MAIN(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -64,6 +65,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		needInitialization = true;
 		routingPath = new HashMap<Integer, List<Integer>>();
 		available = new HashMap<Integer, Boolean>();
+		
 	}
 
 	public SDN_CKN_MAIN() {
@@ -335,6 +337,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 
 	private void CKN_Function() {
 		initialWork();
+		hops = new HashMap<>();
 		Collection<Integer> nodeNeighborGreaterThanK = getNodeNeighborGreaterThank(
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));// 获得所有邻居节点数大于K的节点
 		controllerID = wsn.getSinkNodeId()[0];
@@ -353,6 +356,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 					initializeAvailable();
 					List<Integer> path = findOnePath(false, currentID, controllerID);
 					routingPath.put(currentID, path);
+					hops.put(currentID, path.size()-1);
 					sendActionPacket(currentID, controllerID, path);
 				} else {
 					setAwake(currentID, true);
@@ -364,7 +368,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = app.getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
-				+ Arrays.toString(activeSensorNodes));
+				+ Arrays.toString(activeSensorNodes)+"\nhops="+hops.toString());
 
 		if (NEEDPAINTING) {
 			app.getDisplay().asyncExec(new Runnable() {

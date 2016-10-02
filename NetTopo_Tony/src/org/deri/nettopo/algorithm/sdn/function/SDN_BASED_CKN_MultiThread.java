@@ -7,17 +7,17 @@ import org.deri.nettopo.algorithm.AlgorFunc;
 import org.deri.nettopo.algorithm.Algorithm;
 import org.deri.nettopo.app.NetTopoApp;
 
-public class SDN_BASED_CKN implements AlgorFunc {
+public class SDN_BASED_CKN_MultiThread implements AlgorFunc {
 
 	private Algorithm algorithm;
-	private SDN_CKN_MAIN sdn_Ckn;
+	private SDN_CKN_MAIN2_MutilThread sdn_Ckn;
 
-	public SDN_BASED_CKN(Algorithm algorithm) {
+	public SDN_BASED_CKN_MultiThread(Algorithm algorithm) {
 		this.algorithm = algorithm;
-		sdn_Ckn = new SDN_CKN_MAIN();
+		sdn_Ckn = new SDN_CKN_MAIN2_MutilThread();
 	}
 
-	public SDN_BASED_CKN() {
+	public SDN_BASED_CKN_MultiThread() {
 		this(null);
 	}
 
@@ -39,7 +39,7 @@ public class SDN_BASED_CKN implements AlgorFunc {
 				entry();
 			}
 		});
-		app.getTimer_func().schedule(app.getTimertask_func(), 0, app.getFunc_INTERVAL() * 1000);
+		app.getTimer_func().schedule(app.getTimertask_func(), 0);
 	}
 
 	public void entry() {
