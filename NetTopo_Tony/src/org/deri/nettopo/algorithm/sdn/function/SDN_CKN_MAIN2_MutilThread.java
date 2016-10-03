@@ -67,7 +67,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 3;
+		k = 2;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -367,22 +367,31 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 			List<Integer> path = findOnePath(false, currentID, controllerID);
 			routingPath.put(currentID, path);
 		}
-		for (int i = 0; i < allSensorNodesID.length; i++) {
-			final Integer currentID = allSensorNodesID[i];
-			Integer[] Nu = getAwakeNeighbors(currentID);
-			if (Nu.length < k || isOneOfAwakeNeighborsNumLessThanK(currentID)) {
-				setAwake(currentID, true);
-				broadcastMessage(currentID);
-				pool.execute(new Runnable() {
-					public void run() {
-						updateMessageToController(currentID);
-					}
-				});
-				List<Integer> path = routingPath.get(currentID);
-				int pathLength = path.size() - 1;// requst message path length.
-				hops.put(currentID, 1 + pathLength);// broadcast message +requst
-													// message
 
+		Collection<Integer> nodeNeighborGreaterThank = getNodeNeighborGreaterThank(
+				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));
+		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));
+		Iterator<Integer> it1 = nodeNeighborGreaterThank.iterator();
+		Iterator<Integer> it2 = nodeNeighborLessThanK.iterator();
+		while(it2.hasNext()){
+			final Integer currentID = it2.next();
+			broadcastMessage(currentID);
+			pool.execute(new Runnable() {
+				public void run() {
+					updateMessageToController(currentID);
+				}
+			});
+			List<Integer> path = routingPath.get(currentID);
+			int pathLength = path.size() - 1;// requst message path length.
+			hops.put(currentID, 1 + pathLength);// broadcast message +requst
+												// message
+		}
+		
+		while(it1.hasNext()) {
+			final Integer currentID = it1.next();
+			Integer[] Nu = getAwakeNeighbors(currentID);
+			if (isOneOfAwakeNeighborsNumLessThanK(currentID)) {
+				setAwake(currentID, true);
 			} else {
 				Integer[] Cu = getCu(currentID);
 				int[] awakeNeighborsOf2HopsLessThanRanku = Util
@@ -400,7 +409,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 							} catch (InterruptedException e) {
 								e.printStackTrace();
 							}
-//							updateMessageToController(currentID);
+							// updateMessageToController(currentID);
 						}
 					});
 				} else {
@@ -416,6 +425,22 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 			e.printStackTrace();
 		}
 		System.out.println();
+	}
+
+	/**
+	 * @param temp
+	 * @return 
+	 */
+	private Collection<Integer> getNodeNeighborLessThanK(int[] temp) {
+		Collection<Integer> nodeNeighborLessThanK = new ArrayList<Integer>();
+		for (int currentId : temp) {
+			Integer[] neighbor = getNeighbor(currentId);
+			if (neighbor.length <= k) {
+				nodeNeighborLessThanK.add(currentId);
+			}
+		}
+		return nodeNeighborLessThanK;
+		
 	}
 
 	/**
