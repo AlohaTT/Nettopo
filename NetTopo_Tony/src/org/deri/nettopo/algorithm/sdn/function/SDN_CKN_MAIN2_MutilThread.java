@@ -67,10 +67,11 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 1;
+		k = 4;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
+		hops = Collections.synchronizedMap(new Hashtable<Integer, Integer>());
 	}
 
 	public SDN_CKN_MAIN2_MutilThread() {
@@ -93,7 +94,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
-				+ Arrays.toString(activeSensorNodes)+"\nhops"+hops.toString());
+				+ Arrays.toString(activeSensorNodes) + "\nhops" + hops.toString());
 		app.getDisplay().asyncExec(new Runnable() {
 			public void run() {
 				NetTopoApp.getApp().refresh();
@@ -355,18 +356,27 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 
 	private void CKN_Function() {
 		initialWork();
-		hops = Collections.synchronizedMap(new Hashtable<Integer, Integer>());
-		Collection<Integer> nodeNeighborGreaterThanK = getNodeNeighborGreaterThank(
-				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));// 获得所有邻居节点数大于K的节点
-		controllerID = wsn.getSinkNodeId()[0];
-		ExecutorService pool = Executors.newCachedThreadPool();//建立一个线程池，所有进行寻找路径的线程都放在里面
 
-		Iterator<Integer> iterator = nodeNeighborGreaterThanK.iterator();
-		while (iterator.hasNext()) {
-			final Integer currentID = iterator.next();
+		controllerID = wsn.getSinkNodeId()[0];
+		ExecutorService pool = Executors.newCachedThreadPool();// 建立一个线程池，所有进行寻找路径的线程都放在里面
+
+		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());
+		for (int i = 0; i < allSensorNodesID.length; i++) {
+			int currentID = allSensorNodesID[i];
+			initializeAvailable();
+			List<Integer> path = findOnePath(false, currentID, controllerID);
+			routingPath.put(currentID, path);
+		}
+		for (int i = 0; i < allSensorNodesID.length; i++) {
+			final Integer currentID = allSensorNodesID[i];
 			Integer[] Nu = getAwakeNeighbors(currentID);
 			if (Nu.length < k || isOneOfAwakeNeighborsNumLessThanK(currentID)) {
 				setAwake(currentID, true);
+				broadcastMessage(currentID);
+				List<Integer> path = routingPath.get(currentID);
+				int pathLength = path.size() - 1;// requst message path length.
+				hops.put(currentID, 1 + pathLength);// broadcast message +requst
+													// message
 			} else {
 				Integer[] Cu = getCu(currentID);
 				int[] awakeNeighborsOf2HopsLessThanRanku = Util
@@ -375,7 +385,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 					initializeAvailable();
 					final List<Integer> path = findOnePath(false, currentID, controllerID);
 					routingPath.put(currentID, path);
-					hops.put(currentID, path.size()-1);
+					hops.put(currentID, (path.size() - 1) * 2);
 					pool.execute(new Runnable() {
 						public void run() {
 							sendActionPacket(currentID, controllerID, path);
@@ -385,9 +395,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 								e.printStackTrace();
 							}
 						}
-
 					});
-
 				} else {
 					setAwake(currentID, true);
 				}
@@ -401,6 +409,32 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 			e.printStackTrace();
 		}
 		System.out.println();
+	}
+
+	/**
+	 * @param currentID
+	 */
+	private void broadcastMessage(final Integer currentID) {
+		Integer[] neighborsId = getNeighbor(currentID);
+		if (NEEDPAINTING) {
+			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+				public void run() {
+					NetTopoApp.getApp().getPainter().paintNode(currentID, NodeConfiguration.lineConnectPathColor);
+					;
+				}
+			});
+		}
+		for (int i = 0; i < neighborsId.length; i++) {
+			final int neighbor = neighborsId[i];
+			if (NEEDPAINTING) {
+				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+					public void run() {
+						NetTopoApp.getApp().getPainter().paintConnection(currentID, neighbor,
+								NodeConfiguration.lineConnectPathColor);
+					}
+				});
+			}
+		}
 	}
 
 	/**
@@ -427,7 +461,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 	 */
 	private void checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
 			List<Integer> path) {
-		//图形界面处理
+		// 图形界面处理
 		if (NEEDPAINTING) {
 			if (currentID != controllerID) {
 				final Integer preHopID = path.get(path.indexOf(currentID) - 1);
@@ -454,8 +488,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 
 					public void run() {
-						NetTopoApp.getApp().getPainter().paintConnection(preHopID, currentID,
-								NodeConfiguration.lineConnectPathColor);
+						NetTopoApp.getApp().getPainter().paintConnection(preHopID, currentID);
 					}
 				});
 			}
@@ -482,7 +515,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		}
 
 		// 根据flowtable来check
-		if (packetHeader.getType() == 0){
+		if (packetHeader.getType() == 0) {
 			if (packetHeader.getBehavior() == 0) {
 				if (packetHeader.getFlag() == 0) {
 
@@ -536,6 +569,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		initializeNeighborsOf2Hops();
 		initializeAvailable();
 		routingPath.clear();
+
 	}
 
 	/**

@@ -342,6 +342,14 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));// 获得所有邻居节点数大于K的节点
 		controllerID = wsn.getSinkNodeId()[0];
 
+		int[] allSensorNodesID = wsn.getAllSensorNodesID();
+		for (int i = 0; i < allSensorNodesID.length; i++) {
+			int currentID=allSensorNodesID[i];
+			initializeAvailable();
+			List<Integer> path = findOnePath(false, currentID, controllerID);
+			routingPath.put(currentID, path);
+			hops.put(currentID, path.size()-1);
+		}
 		Iterator<Integer> iterator = nodeNeighborGreaterThanK.iterator();
 		while (iterator.hasNext()) {
 			Integer currentID = iterator.next();
