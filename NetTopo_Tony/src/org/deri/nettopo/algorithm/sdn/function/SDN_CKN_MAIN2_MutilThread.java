@@ -30,6 +30,7 @@ import org.deri.nettopo.node.sdn.PacketHeader;
 import org.deri.nettopo.node.sdn.SensorNode_SDN;
 import org.deri.nettopo.util.Coordinate;
 import org.deri.nettopo.util.Util;
+import org.eclipse.swt.graphics.RGB;
 
 /*
  * 
@@ -99,9 +100,8 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 			public void run() {
 				NetTopoApp.getApp().refresh();
 				NetTopoApp.getApp().addLog(message.toString());
-				// resetColorAfterCKN();
-				// app.cmd_repaintNetwork();
-				// System.out.println(Thread.currentThread().toString());
+//				 resetColorAfterCKN();
+//				 app.cmd_repaintNetwork();
 			}
 		});
 
@@ -375,9 +375,9 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		Iterator<Integer> it2 = nodeNeighborLessThanK.iterator();
 		while(it2.hasNext()){
 			final Integer currentID = it2.next();
-			broadcastMessage(currentID);
 			pool.execute(new Runnable() {
 				public void run() {
+					sendAwakeRequstMessageToAllNeighbors(currentID);
 					updateMessageToController(currentID);
 				}
 			});
@@ -389,6 +389,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		
 		while(it1.hasNext()) {
 			final Integer currentID = it1.next();
+			updateMessageToController(currentID);
 			Integer[] Nu = getAwakeNeighbors(currentID);
 			if (isOneOfAwakeNeighborsNumLessThanK(currentID)) {
 				setAwake(currentID, true);
@@ -409,7 +410,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 							} catch (InterruptedException e) {
 								e.printStackTrace();
 							}
-							// updateMessageToController(currentID);
+							 updateMessageToController(currentID);
 						}
 					});
 				} else {
@@ -424,7 +425,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		System.out.println();
+		System.out.println(hops.toString());
 	}
 
 	/**
@@ -447,43 +448,43 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 	 * @param currentID
 	 */
 	private void updateMessageToController(final Integer currentID) {
-		if (currentID == controllerID) {
-			return;
-		}
 		final List<Integer> path = routingPath.get(currentID);
-		final int nextNodeId = path.get(path.size() - 2);
-		if (NEEDPAINTING) {
-			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-				public void run() {
-					NetTopoApp.getApp().getPainter().paintConnection(currentID, nextNodeId,
-							NodeConfiguration.NodeInPathColor);
-
-					if (NEEDINTERVAL) {
-						try {
-							Thread.sleep(INTERVALTIME);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
+		Object[] array = path.toArray();
+		for (int i = array.length-1; i > 0; i--) {
+			final Integer currentNodeId = (Integer) array[i];
+			final Integer nextNodeId=(Integer) array[i-1];
+			if (NEEDPAINTING) {
+				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+					public void run() {
+						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
+								NodeConfiguration.NodeInPathColor);
+	
+						if (NEEDINTERVAL) {
+							try {
+								Thread.sleep(INTERVALTIME);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+						if (!ONEOFF) {
+							NetTopoApp.getApp().refresh();
 						}
 					}
-					if (!ONEOFF) {
-						NetTopoApp.getApp().refresh();
-					}
+				});
+				try {
+					Thread.sleep(1);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
-			});
+			}
 		}
-		try {
-			Thread.sleep(1);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		updateMessageToController(nextNodeId);
 	}
 
 	/**
 	 * @param currentID
 	 */
-	private void broadcastMessage(final Integer currentID) {
+	private void sendAwakeRequstMessageToAllNeighbors(final Integer currentID) {
 		Integer[] neighborsId = getNeighbor(currentID);
 		if (NEEDPAINTING) {
 			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
@@ -745,6 +746,24 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		if (wsn != null) {
 			available.put(currentID, true);
 			if (canReachSink(currentID, controllerId, path, searched)) {
+				if (needPainting) {
+					/*
+					 * change the colour of the intermediate node on the
+					 * path
+					 */
+					for (int i = 1; i < path.size() - 1; i++) {
+						int id1 = ((Integer) path.get(i)).intValue();
+						app.getPainter().paintNode(id1, new RGB(205, 149, 86));
+					}
+
+					/* paint the path sorted in LinkedList path */
+					for (int i = 0; i < path.size() - 1; i++) {
+						int id1 = ((Integer) path.get(i)).intValue();
+						int id2 = ((Integer) path.get(i + 1)).intValue();
+						app.getPainter().paintConnection(id1, id2, new RGB(185, 149, 86));
+					}
+
+				}
 				return path;
 			}
 		}
