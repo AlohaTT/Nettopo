@@ -39,7 +39,7 @@ public class SDN_BASED_CKN_MultiThread implements AlgorFunc {
 				entry();
 			}
 		});
-		app.getTimer_func().schedule(app.getTimertask_func(), 0,app.getFunc_INTERVAL() * 1000);
+		app.getTimer_func().schedule(app.getTimertask_func(), 0,app.getFunc_INTERVAL() * 100);
 	}
 
 	public void entry() {
