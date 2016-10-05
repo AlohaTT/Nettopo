@@ -69,7 +69,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 2;
+		k = 1;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -99,7 +99,15 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 			totalHops=totalHops+iterator.next();
 		}
 		System.out.println("total hops:"+totalHops);
-
+		
+		int totalHopsInSDCKN=0;
+		Iterator<List<Integer>> pathIt = routingPath.values().iterator();
+		while (pathIt.hasNext()) {
+			List<Integer> path = pathIt.next();
+			totalHopsInSDCKN=totalHopsInSDCKN+path.size()-1;
+		}
+		totalHopsInSDCKN=totalHopsInSDCKN*2;
+		System.out.println("total hops in SDCKN:"+totalHopsInSDCKN);
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
@@ -431,6 +439,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 						}
 					});
 				} else {
+					sendMessageToController(currentID);
 					setAwake(currentID, true);
 				}
 			}
