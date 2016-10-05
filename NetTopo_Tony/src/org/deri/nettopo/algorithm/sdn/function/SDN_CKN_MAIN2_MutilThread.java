@@ -69,7 +69,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 1;
+		k = 5;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -439,7 +439,11 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 						}
 					});
 				} else {
+					initializeAvailable();
+
 					sendMessageToController(currentID);
+					final List<Integer> path = findOnePath(false, currentID, controllerID);
+					hops.put(currentID, hops.get(currentID)+path.size()-1);
 					setAwake(currentID, true);
 				}
 			}
@@ -551,7 +555,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		packetHeader.setState(0);
 		packetHeader.setBehavior(1);
 		header.put(currentID, packetHeader);
-		hops.put(destinationID, (path.size() - 1));
+		hops.put(destinationID, hops.get(destinationID)+(path.size() - 1));
 		checkPacketHeaderAccordingToFlowTable(currentID, packetHeader, path);
 
 	}

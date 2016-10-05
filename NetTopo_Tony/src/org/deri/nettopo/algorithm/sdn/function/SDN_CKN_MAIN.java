@@ -68,7 +68,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 2;
+		k = 1;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -92,10 +92,25 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 			}
 		});
 
+		Iterator<Integer> iterator = hops.values().iterator();
+		int totalHops = 0;
+		while (iterator.hasNext()) {
+			totalHops = totalHops + iterator.next();
+		}
+		System.out.println("total hops:" + totalHops);
+
+		int totalHopsInSDCKN = 0;
+		Iterator<List<Integer>> pathIt = routingPath.values().iterator();
+		while (pathIt.hasNext()) {
+			List<Integer> path = pathIt.next();
+			totalHopsInSDCKN = totalHopsInSDCKN + path.size() - 1;
+		}
+		totalHopsInSDCKN = totalHopsInSDCKN * 2;
+		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
-				+ Arrays.toString(activeSensorNodes) + "\nhops" + hops.toString());
+				+ Arrays.toString(activeSensorNodes) + "\ntotal hops:" + totalHops);
 		app.getDisplay().asyncExec(new Runnable() {
 			public void run() {
 				NetTopoApp.getApp().refresh();
@@ -366,7 +381,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 			List<Integer> path = findOnePath(false, currentID, controllerID);
 			routingPath.put(currentID, path);
 		}
-		// 获得所有邻居节点数比K小的节点id，同时对这些节点进行操作
+		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));
 		Iterator<Integer> it2 = nodeNeighborLessThanK.iterator();
@@ -374,41 +389,52 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		while (it2.hasNext()) {
 			final Integer currentID = it2.next();
 			if (neighborCannotGoToSleep.contains(currentID)) {
-				sendUpdateMessageToController(currentID);
+				sendMessageToController(currentID);
 				continue;
 			}
 			Integer[] neighbors = getNeighbor(currentID);
 			for (Integer neighborId : neighbors)
 				neighborCannotGoToSleep.add(neighborId);
 			sendAwakeRequstMessageToAllNeighbors(currentID);
-			sendUpdateMessageToController(currentID);
+			sendMessageToController(currentID);
 
 		}
+		// 获取邻居节点数量高于k的节点id
 		Collection<Integer> nodeNeighborGreaterThank = getNodeNeighborGreaterThank(
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));
 		Iterator<Integer> it1 = nodeNeighborGreaterThank.iterator();
 
 		while (it1.hasNext()) {
 			final Integer currentID = it1.next();
-			// sendUpdateMessageToController(currentID);
-			Integer[] Nu = getAwakeNeighbors(currentID);
-			if (isOneOfAwakeNeighborsNumLessThanK(currentID)) {
-				setAwake(currentID, true);
-			} else {
-				Integer[] Cu = getCu(currentID);
-				int[] awakeNeighborsOf2HopsLessThanRanku = Util
-						.IntegerArray2IntArray(getAwakeNeighborsOf2HopsLessThanRanku(currentID));
-				if (atLeast_k_Neighbors(Nu, Cu) && qualifiedConnectedInCu(Cu, awakeNeighborsOf2HopsLessThanRanku)) {
-					initializeAvailable();
-					final List<Integer> path = findOnePath(false, currentID, controllerID);
-					routingPath.put(currentID, path);
-					hops.put(currentID, (path.size() - 1) * 2);
-				} else {
-					setAwake(currentID, true);
-				}
+			if (neighborCannotGoToSleep.contains(currentID)) {
+				sendMessageToController(currentID);
+				continue;
 			}
+			Integer[] Nu = getAwakeNeighbors(currentID);
 
+			Integer[] Cu = getCu(currentID);
+			int[] awakeNeighborsOf2HopsLessThanRanku = Util
+					.IntegerArray2IntArray(getAwakeNeighborsOf2HopsLessThanRanku(currentID));
+			if (atLeast_k_Neighbors(Nu, Cu) && qualifiedConnectedInCu(Cu, awakeNeighborsOf2HopsLessThanRanku)) {
+				initializeAvailable();
+				final List<Integer> path = findOnePath(false, currentID, controllerID);
+				routingPath.put(currentID, path);
+				sendActionPacket(currentID, controllerID, path);
+				try {
+					Thread.sleep(1);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				sendMessageToController(currentID);
+			} else {
+				initializeAvailable();
+				sendMessageToController(currentID);
+				final List<Integer> path = findOnePath(false, currentID, controllerID);
+				hops.put(currentID, hops.get(currentID) + path.size() - 1);
+				setAwake(currentID, true);
+			}
 		}
+
 		System.out.println(hops.toString());
 	}
 
@@ -431,7 +457,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 	/**
 	 * @param currentID
 	 */
-	private void sendUpdateMessageToController(final Integer currentID) {
+	private void sendMessageToController(final Integer currentID) {
 		final List<Integer> path = routingPath.get(currentID);
 		Object[] array = path.toArray();
 		int pathLength = path.size() - 1;// requst message path length.
@@ -509,6 +535,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		packetHeader.setState(0);
 		packetHeader.setBehavior(1);
 		header.put(currentID, packetHeader);
+		hops.put(destinationID, hops.get(destinationID) + (path.size() - 1));
 		checkPacketHeaderAccordingToFlowTable(currentID, packetHeader, path);
 
 	}
