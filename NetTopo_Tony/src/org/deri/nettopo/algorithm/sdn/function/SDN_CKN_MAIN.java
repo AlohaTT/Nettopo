@@ -13,9 +13,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Vector;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.deri.nettopo.algorithm.AlgorFunc;
@@ -50,16 +47,13 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 	private HashMap<Integer, PacketHeader> header;
 	private HashMap<Integer, NeighborTable> neighborTable;
 	private HashMap<Integer, Integer[]> neighborsOf2Hops;
+	private Map<Integer, Integer> hops;
 
-	private static Logger logger = Logger.getLogger(SDN_CKN_MAIN2_MutilThread.class);
 	private Map<Integer, List<Integer>> routingPath;
 	private HashMap<Integer, Boolean> available;
 	private int controllerID;
 	private static boolean NEEDPAINTING = true;// 是否需要绘制路线
-	protected static final boolean NEEDINTERVAL = true;// 绘制路线时是否需要时间间隔
-	protected static final long INTERVALTIME = 0;// 绘制路线时的时间间隔
-	protected static final boolean ONEOFF = false;// 是否瞬间出结果
-	private Map<Integer, Integer> hops;
+	private static Logger logger = Logger.getLogger(SDN_CKN_MAIN2_MutilThread.class);
 
 	public SDN_CKN_MAIN(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -68,7 +62,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 1;
+		k = 2;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -115,7 +109,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 			public void run() {
 				NetTopoApp.getApp().refresh();
 				NetTopoApp.getApp().addLog(message.toString());
-				// resetColorAfterCKN();
+				resetColorAfterCKN();
 				// app.cmd_repaintNetwork();
 			}
 		});
@@ -374,7 +368,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		controllerID = wsn.getSinkNodeId()[0];
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
 																												// id
-		// 通过tpgf算法查找每个节点到controller的路径
+		// 通过tpgf算法查找每个节点到controller的路径,保存到routingPath
 		for (int i = 0; i < allSensorNodesID.length; i++) {
 			int currentID = allSensorNodesID[i];
 			initializeAvailable();
@@ -411,20 +405,14 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 				continue;
 			}
 			Integer[] Nu = getAwakeNeighbors(currentID);
-
 			Integer[] Cu = getCu(currentID);
 			int[] awakeNeighborsOf2HopsLessThanRanku = Util
 					.IntegerArray2IntArray(getAwakeNeighborsOf2HopsLessThanRanku(currentID));
 			if (atLeast_k_Neighbors(Nu, Cu) && qualifiedConnectedInCu(Cu, awakeNeighborsOf2HopsLessThanRanku)) {
-				initializeAvailable();
+				initializeAvailable();//tpgf每次查找完成都要初始化availabl变量
 				final List<Integer> path = findOnePath(false, currentID, controllerID);
 				routingPath.put(currentID, path);
 				sendActionPacket(currentID, controllerID, path);
-				try {
-					Thread.sleep(1);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
 				sendMessageToController(currentID);
 			} else {
 				initializeAvailable();
@@ -435,7 +423,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 			}
 		}
 
-		System.out.println(hops.toString());
+		// System.out.println(hops.toString());
 	}
 
 	/**
@@ -472,26 +460,9 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 					public void run() {
 						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
-								NodeConfiguration.NodeInPathColor);
-
-						if (NEEDINTERVAL) {
-							try {
-								Thread.sleep(INTERVALTIME);
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
-						}
-						if (!ONEOFF) {
-							NetTopoApp.getApp().refresh();
-						}
+								new RGB(128, 128, 128));
 					}
 				});
-				try {
-					Thread.sleep(1);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
 			}
 		}
 	}
@@ -504,7 +475,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		if (NEEDPAINTING) {
 			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 				public void run() {
-					NetTopoApp.getApp().getPainter().paintNode(currentID, NodeConfiguration.NodeInGasRGB);
+					NetTopoApp.getApp().getPainter().paintNode(currentID, new RGB(255, 127, 80));
 				}
 			});
 		}
@@ -547,58 +518,6 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 	 */
 	private void checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
 			List<Integer> path) {
-		// 图形界面处理
-		if (NEEDPAINTING) {
-			if (currentID != controllerID) {
-				final Integer preHopID = path.get(path.indexOf(currentID) - 1);
-				if (preHopID == controllerID) {
-					NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-						public void run() {
-							NetTopoApp.getApp().getPainter().paintNode(preHopID, NodeConfiguration.SinkNodeColorRGB);
-						}
-					});
-				} else if (awake.get(preHopID) == false) {
-					NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-						public void run() {
-							NetTopoApp.getApp().getPainter().paintNode(preHopID, NodeConfiguration.SleepNodeColorRGB);
-						}
-					});
-				} else {
-					NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-						public void run() {
-							NetTopoApp.getApp().getPainter().paintNode(preHopID, NodeConfiguration.AwakeNodeColorRGB);
-						}
-					});
-				}
-
-				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-
-					public void run() {
-						NetTopoApp.getApp().getPainter().paintConnection(preHopID, currentID);
-					}
-				});
-			}
-			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-				public void run() {
-					if (NEEDINTERVAL) {
-						try {
-							Thread.sleep(INTERVALTIME);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-					if (!ONEOFF) {
-						NetTopoApp.getApp().refresh();
-					}
-					NetTopoApp.getApp().getPainter().paintNode(currentID, NodeConfiguration.NodeInPathColor);
-				}
-			});
-			try {
-				Thread.sleep(1);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
 
 		// 根据flowtable来check
 		if (packetHeader.getType() == 0) {
@@ -615,14 +534,6 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 						if (NEEDPAINTING) {
 							NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 								public void run() {
-									// NetTopoApp.getApp().refresh();
-									if (NEEDINTERVAL) {
-										try {
-											Thread.sleep(INTERVALTIME);
-										} catch (InterruptedException e) {
-											e.printStackTrace();
-										}
-									}
 									NetTopoApp.getApp().getPainter().paintNode(currentID,
 											NodeConfiguration.SleepNodeColorRGB);
 								}
@@ -786,7 +697,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 					for (int i = 0; i < path.size() - 1; i++) {
 						int id1 = ((Integer) path.get(i)).intValue();
 						int id2 = ((Integer) path.get(i + 1)).intValue();
-						app.getPainter().paintConnection(id1, id2, new RGB(185, 149, 86));
+						app.getPainter().paintConnection(id1, id2, new RGB(128, 128, 128));
 					}
 
 				}

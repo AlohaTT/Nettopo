@@ -33,6 +33,8 @@ import org.deri.nettopo.util.Coordinate;
 import org.deri.nettopo.util.Util;
 import org.eclipse.swt.graphics.RGB;
 
+import com.sun.org.apache.bcel.internal.generic.NEW;
+
 /*
  * 
  * 
@@ -69,7 +71,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 5;
+		k = 1;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -492,7 +494,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 					public void run() {
 						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
-								NodeConfiguration.NodeInPathColor);
+								new RGB(128, 128, 128));
 
 						if (NEEDINTERVAL) {
 							try {
@@ -524,7 +526,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 		if (NEEDPAINTING) {
 			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 				public void run() {
-					NetTopoApp.getApp().getPainter().paintNode(currentID, NodeConfiguration.NodeInGasRGB);
+					NetTopoApp.getApp().getPainter().paintNode(currentID, new RGB(255,127,80));
 				}
 			});
 		}
@@ -806,7 +808,7 @@ public class SDN_CKN_MAIN2_MutilThread implements AlgorFunc {
 					for (int i = 0; i < path.size() - 1; i++) {
 						int id1 = ((Integer) path.get(i)).intValue();
 						int id2 = ((Integer) path.get(i + 1)).intValue();
-						app.getPainter().paintConnection(id1, id2, new RGB(185, 149, 86));
+						app.getPainter().paintConnection(id1, id2, new RGB(128, 128, 128));
 					}
 
 				}

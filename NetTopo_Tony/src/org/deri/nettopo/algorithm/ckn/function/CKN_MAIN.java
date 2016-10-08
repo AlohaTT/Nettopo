@@ -47,7 +47,7 @@ public class CKN_MAIN implements AlgorFunc {
 		neighbors = new HashMap<Integer, Integer[]>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
 		awake = new HashMap<Integer, Boolean>();
-		k = 4;
+		k = 1;
 		needInitialization = true;
 	}
 
