@@ -74,7 +74,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
 		linkFaultRatio = 0.1;
-		faultLink = new HashMap<Integer, Integer>();
+		faultLink = new HashMap<Integer,Integer>();
 	}
 
 	public SDN_CKN_MAIN() {
@@ -109,10 +109,9 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		}
 		totalHopsInSDCKN = totalHopsInSDCKN * 2;
 		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
-
-		System.out.println("Control Requst:" + controlRequest + "\tControl Action:" + controlAction + "\tUpdateMessage:"
-				+ updateMessage + "\tBroadcastMessage:" + broadcastMessage);
-
+		
+		System.out.println("Control Requst:"+controlRequest+"\tControl Action:"+controlAction+"\tUpdateMessage:"+updateMessage+"\tBroadcastMessage:"+broadcastMessage);
+		
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
@@ -391,15 +390,15 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 			List<Integer> path = findOnePath(false, currentID, controllerID);
 			routingPath.put(currentID, path);
 		}
-		// 随机linkFault
-		int faultLinkNumber = (int) (wsn.getAllNodes().size() * linkFaultRatio);
+		//随机linkFault
+		int faultLinkNumber=(int) (wsn.getAllNodes().size() * linkFaultRatio);
 		for (int i = 0; i < faultLinkNumber; i++) {
 			Integer[] neighbors = getNeighbor(allSensorNodesID[i]);
-			int[] neighborsIntValue = new int[neighbors.length];
+			int[] neighborsIntValue=new int[neighbors.length];
 			for (int j = 0; j < neighborsIntValue.length; j++) {
-				neighborsIntValue[j] = neighbors[j];
+				neighborsIntValue[j]=neighbors[j];
 			}
-			faultLink.put(allSensorNodesID[i], Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[i]);
+			faultLink.put(allSensorNodesID[i],Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[i]);
 		}
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
@@ -567,9 +566,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		}
 		header.put(currentID, packetHeader);// 设置header
 		hops.put(destinationID, hops.get(destinationID) + (path.size() - 1));
-		controlAction = controlAction + path.size() - 1;
-		
-		
+		controlAction=controlAction+path.size()-1;
 		checkPacketHeaderAccordingToFlowTable(currentID, packetHeader, path);
 	}
 
@@ -580,11 +577,14 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 	 */
 	private void checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
 			List<Integer> path) {
+		
 		// 根据flowtable来check
 		if (packetHeader.getType() == 0) {
 			if (packetHeader.getBehavior() == 0) {
 				if (packetHeader.getFlag() == 0) {
+
 					setAwake(currentID, true);
+					// send a update message to controller
 				}
 			} else {
 				if (packetHeader.getDestination() == currentID) {
