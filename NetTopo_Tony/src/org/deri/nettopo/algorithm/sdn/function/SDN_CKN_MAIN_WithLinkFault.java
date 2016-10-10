@@ -34,7 +34,7 @@ import org.eclipse.swt.graphics.RGB;
  * 
  * 
  */
-public class SDN_CKN_MAIN implements AlgorFunc {
+public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 
 	private Algorithm algorithm;
 	private WirelessSensorNetwork wsn;
@@ -61,7 +61,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 	private double linkFaultRatio;
 	private HashMap<Integer, Integer> faultLink;
 
-	public SDN_CKN_MAIN(Algorithm algorithm) {
+	public SDN_CKN_MAIN_WithLinkFault(Algorithm algorithm) {
 		this.algorithm = algorithm;
 		neighbors = new HashMap<Integer, Integer[]>();
 		awake = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
@@ -76,7 +76,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		linkFaultRatio = 0.1;
 	}
 
-	public SDN_CKN_MAIN() {
+	public SDN_CKN_MAIN_WithLinkFault() {
 		this(null);
 	}
 
