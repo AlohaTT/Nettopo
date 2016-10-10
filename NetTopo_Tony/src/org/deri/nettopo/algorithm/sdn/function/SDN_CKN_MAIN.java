@@ -58,8 +58,6 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 	private int controlAction;
 	private int updateMessage;
 	private int broadcastMessage;
-	private double linkFaultRatio;
-	private HashMap<Integer, Integer> faultLink;
 
 	public SDN_CKN_MAIN(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -73,7 +71,6 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.1;
 	}
 
 	public SDN_CKN_MAIN() {
@@ -112,7 +109,6 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		System.out.println("Control Requst:" + controlRequest + "\tControl Action:" + controlAction + "\tUpdateMessage:"
 				+ updateMessage + "\tBroadcastMessage:" + broadcastMessage);
 
-		System.out.println("Fault Link:"+faultLink.toString());
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
@@ -377,11 +373,9 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 
 	private void CKN_Function() {
 		initialWork();
-		faultLink = new HashMap<Integer, Integer>();
 
 		controllerID = wsn.getSinkNodeId()[0];
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
-		int[] allNodesID=Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());
 		controlRequest = 0;
 		controlAction = 0;
 		updateMessage = 0;
@@ -392,21 +386,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 			List<Integer> path = findOnePath(false, currentID, controllerID);
 			routingPath.put(currentID, path);
 		}
-		// 随机linkFault
-		int totalLinkNumber = 0;
-		for (int i = 0; i < allNodesID.length; i++) {
-			int currentID = allNodesID[i];
-			totalLinkNumber=totalLinkNumber+getNeighbor(currentID).length;
-		}
-		int faultLinkNumber=(int) (totalLinkNumber*linkFaultRatio);
-		for (int i = 0; i < faultLinkNumber; i++) {
-			Integer[] neighbors = getNeighbor(allSensorNodesID[i]);
-			int[] neighborsIntValue = new int[neighbors.length];
-			for (int j = 0; j < neighborsIntValue.length; j++) {
-				neighborsIntValue[j] = neighbors[j];
-			}
-			faultLink.put(allSensorNodesID[i], Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[0]);
-		}
+	
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));
@@ -615,27 +595,6 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 				} else {
 					if (!path.isEmpty()) {
 						final Integer nextHopID = path.get(path.indexOf(currentID) + 1);
-//						if (faultLink.containsKey(currentID) && faultLink.get(currentID) == nextHopID) {
-//							updateMessage(currentID);
-//							requestMessage(currentID);
-//
-//							// 把检测到的faultlink删除
-//							LinkedList<Integer> neighborList = new LinkedList<>();
-//							Iterator<Integer> iteratorNeighborList = neighborList.iterator();
-//							Integer[] nei = neighbors.get(currentID);
-//							for (int i = 0; i < nei.length; i++) {
-//								if (faultLink.containsKey(nei[i]))
-//									break;
-//								neighborList.add(nei[i]);
-//							}
-//							Integer[] neighborArray = new Integer[neighborList.size()];
-//							for (int i = 0; i < neighborArray.length; i++) {
-//								neighborArray[i]=iteratorNeighborList.next();
-//							}
-//							neighbors.put(currentID, neighborArray);
-//							routingPath.put(currentID, findOnePath(false, currentID, controllerID));
-//							return;
-//						}
 						checkPacketHeaderAccordingToFlowTable(nextHopID, packetHeader, path);
 					}
 
