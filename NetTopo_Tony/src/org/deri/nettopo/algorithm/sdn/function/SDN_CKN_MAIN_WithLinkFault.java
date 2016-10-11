@@ -55,8 +55,8 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private int controllerID;
 	private static boolean NEEDPAINTING = true;// 是否需要绘制路线
 	private static Logger logger = Logger.getLogger(SDN_CKN_MAIN2_MutilThread.class);
-	private int controlRequest;
-	private int controlAction;
+	private int controlRequestMessage;
+	private int controlActionMessage;
 	private int updateMessage;
 	private int broadcastMessage;
 	private double linkFaultRatio;
@@ -74,7 +74,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.1;
+		linkFaultRatio = 0.5;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -110,10 +110,9 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		totalHopsInSDCKN = totalHopsInSDCKN * 2;
 		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
 
-		System.out.println("Control Requst:" + controlRequest + "\tControl Action:" + controlAction + "\tUpdateMessage:"
-				+ updateMessage + "\tBroadcastMessage:" + broadcastMessage);
+		System.out.println("Control Requst:" + controlRequestMessage + "\tControl Action:" + controlActionMessage
+				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage);
 
-		System.out.println("Fault Link:" + faultLink.toString());
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
@@ -379,12 +378,11 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private void CKN_Function() {
 		initialWork();
 		faultLink = new HashMap<Integer, Integer>();
-
 		controllerID = wsn.getSinkNodeId()[0];
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
 		int[] allNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());
-		controlRequest = 0;
-		controlAction = 0;
+		controlRequestMessage = 0;
+		controlActionMessage = 0;
 		updateMessage = 0;
 		broadcastMessage = 0;
 		// 通过tpgf算法查找每个节点到controller的路径,保存到routingPath
@@ -408,7 +406,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 				neighborsIntValue[j] = neighbors[j];
 			}
 			int faultNeighbor = Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[0];
-			faultLink.put(allSensorNodesID[i],faultNeighbor);
+			faultLink.put(allSensorNodesID[i], faultNeighbor);
 			faultLink.put(faultNeighbor, allSensorNodesID[i]);
 		}
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
@@ -452,7 +450,6 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			}
 		}
 
-		// System.out.println(hops.toString());
 	}
 
 	/**
@@ -470,14 +467,15 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			updateMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
-			if (NEEDPAINTING) {
-				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
-								new RGB(128, 128, 128));
-					}
-				});
-			}
+			// if (NEEDPAINTING) {
+			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+			// public void run() {
+			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
+			// nextNodeId,
+			// new RGB(128, 128, 128));
+			// }
+			// });
+			// }
 		}
 	}
 
@@ -509,7 +507,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 																// +requst
 		// message
 		for (int i = array.length - 1; i > 0; i--) {
-			controlRequest++;
+			controlRequestMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
 			if (NEEDPAINTING) {
@@ -553,7 +551,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	/**
 	 * @param controllerID
 	 */
-	private void controllerMessage(int destinationID, int controllerID, boolean awake) {
+	private boolean controllerMessage(int destinationID, int controllerID, boolean awake) {
 		List<Integer> path = routingPath.get(destinationID);
 		PacketHeader packetHeader = new PacketHeader();
 		if (!awake) {
@@ -572,9 +570,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			packetHeader.setBehavior(1);
 		}
 		header.put(controllerID, packetHeader);// 设置header
-		hops.put(destinationID, hops.get(destinationID) + (path.size() - 1));
-		controlAction = controlAction + path.size() - 1;
-		checkPacketHeaderAccordingToFlowTable(controllerID, packetHeader, path);
+		return checkPacketHeaderAccordingToFlowTable(controllerID, packetHeader, path);
 	}
 
 	/**
@@ -582,16 +578,17 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	 * @param currentID
 	 * @param packetHeader
 	 */
-	private void checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
+	private boolean checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
 			List<Integer> path) {
-
+		if (currentID != controllerID) {
+			hops.put(currentID, hops.get(currentID) + 1);
+			controlActionMessage = controlActionMessage + 1;
+		}
 		// 根据flowtable来check
 		if (packetHeader.getType() == 0) {
 			if (packetHeader.getBehavior() == 0) {
 				if (packetHeader.getFlag() == 0) {
-
 					setAwake(currentID, true);
-					// send a update message to controller
 				}
 			} else {
 				if (packetHeader.getDestination() == currentID) {
@@ -633,9 +630,21 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 							ListIterator<Integer> listIterator = path.listIterator(path.indexOf(currentID));
 							while (listIterator.hasNext()) {
 								Integer nodeAfterFaultLink = (Integer) listIterator.next();
-								routingPath.put(nodeAfterFaultLink, findOnePath(false, nodeAfterFaultLink, controllerID));
+								routingPath.put(nodeAfterFaultLink,
+										findOnePath(false, nodeAfterFaultLink, controllerID));
 							}
-							return;
+//							int size = path.size()-1;
+//							controllerMessage(path.get(size-1), controllerID, true);
+//							System.out.println("Fault Link:" + faultLink.toString());
+							System.out.println("Fault Link " + currentID + " to " + nextHopID + " we meet");
+							return false;
+						}
+						if (NEEDPAINTING) {
+							NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+								public void run() {
+									NetTopoApp.getApp().getPainter().paintConnection(currentID, nextHopID);
+								}
+							});
 						}
 						checkPacketHeaderAccordingToFlowTable(nextHopID, packetHeader, path);
 					}
@@ -645,6 +654,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		} else {
 
 		}
+		return true;
 	}
 
 	/**
