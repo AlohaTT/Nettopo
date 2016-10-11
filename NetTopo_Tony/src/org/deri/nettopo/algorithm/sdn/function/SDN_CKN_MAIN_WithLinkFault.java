@@ -69,7 +69,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 1;
+		k = 2;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -457,13 +457,9 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	 */
 	private void updateMessage(Integer currentID) {
 		final List<Integer> path = routingPath.get(currentID);
-		Object[] array = path.toArray();
-		int pathLength = path.size() - 1;// requst message path length.
-		hops.put(currentID, hops.get(currentID) + pathLength);// broadcast
-																// message
-																// +requst
-		// message
+		Integer[] array = path.toArray(new Integer[path.size()]);
 		for (int i = array.length - 1; i > 0; i--) {
+			hops.put(array[i], hops.get(array[i])+1);
 			updateMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
@@ -500,13 +496,9 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	 */
 	private void requestMessage(final Integer currentID) {
 		final List<Integer> path = routingPath.get(currentID);
-		Object[] array = path.toArray();
-		int pathLength = path.size() - 1;// requst message path length.
-		hops.put(currentID, hops.get(currentID) + pathLength);// broadcast
-																// message
-																// +requst
-		// message
+		Integer[] array = path.toArray(new Integer[path.size()]);
 		for (int i = array.length - 1; i > 0; i--) {
+			hops.put(array[i], hops.get(array[i])+1);
 			controlRequestMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
