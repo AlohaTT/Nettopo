@@ -74,7 +74,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.5;
+		linkFaultRatio = 0.2;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -197,7 +197,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	}
 
 	private void initializeNeighbors() {
-		int[] ids = wsn.getAllSensorNodesID();
+		int[] ids = wsn.getAllNodesID();
 		for (int i = 0; i < ids.length; i++) {
 			Integer ID = new Integer(ids[i]);
 			Integer[] neighbor = getNeighbor(ids[i]);
@@ -224,7 +224,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	}
 
 	private Integer[] getNeighbor(int id) {
-		int[] ids = wsn.getAllSensorNodesID();
+		int[] ids = wsn.getAllNodesID();
 		ArrayList<Integer> neighbor = new ArrayList<Integer>();
 		int maxTR = Integer.parseInt(wsn.getNodeByID(id).getAttrValue("Max TR"));
 		Coordinate coordinate = wsn.getCoordianteByID(id);
@@ -256,8 +256,10 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		HashSet<Integer> nowAwakeNeighbor = new HashSet<Integer>();
 		Integer[] neighbor = neighbors.get(new Integer(id));
 		for (int i = 0; i < neighbor.length; i++) {
-			if (awake.get(neighbor[i]).booleanValue()) {
-				nowAwakeNeighbor.add(neighbor[i]);
+			if (neighbor[i] != controllerID) {
+				if (awake.get(neighbor[i]).booleanValue()) {
+					nowAwakeNeighbor.add(neighbor[i]);
+				}
 			}
 		}
 		return nowAwakeNeighbor.toArray(new Integer[nowAwakeNeighbor.size()]);
@@ -442,11 +444,11 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			int[] awakeNeighborsOf2HopsLessThanRanku = Util
 					.IntegerArray2IntArray(getAwakeNeighborsOf2HopsLessThanRanku(currentID));
 			if (atLeast_k_Neighbors(Nu, Cu) && qualifiedConnectedInCu(Cu, awakeNeighborsOf2HopsLessThanRanku)) {
+				requestMessage(currentID);
 				controllerMessage(currentID, controllerID, false);
-				requestMessage(currentID);
 			} else {
-				controllerMessage(currentID, controllerID, true);
 				requestMessage(currentID);
+				controllerMessage(currentID, controllerID, true);
 			}
 		}
 	}
@@ -457,19 +459,20 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private void updateMessage(Integer currentID) {
 		final List<Integer> path = routingPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
-		for (int i = array.length-1; i > 0; i--) {
+		for (int i = array.length - 1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			updateMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
-//			if (NEEDPAINTING) {
-//				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-//					public void run() {
-//						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
-//								new RGB(128, 128, 128));
-//					}
-//				});
-//			}
+			// if (NEEDPAINTING) {
+			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+			// public void run() {
+			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
+			// nextNodeId,
+			// new RGB(128, 128, 128));
+			// }
+			// });
+			// }
 		}
 	}
 
@@ -495,19 +498,20 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private void requestMessage(final Integer currentID) {
 		final List<Integer> path = routingPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
-		for (int i = array.length-1; i > 0; i--) {
+		for (int i = array.length - 1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			controlRequestMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
-//			if (NEEDPAINTING) {
-//				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-//					public void run() {
-//						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
-//								new RGB(128, 128, 128));
-//					}
-//				});
-//			}
+			// if (NEEDPAINTING) {
+			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+			// public void run() {
+			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
+			// nextNodeId,
+			// new RGB(128, 128, 128));
+			// }
+			// });
+			// }
 		}
 	}
 
@@ -607,8 +611,10 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 					if (!path.isEmpty()) {
 						final Integer nextHopID = path.get(path.indexOf(currentID) + 1);
 						if (faultLink.containsKey(currentID) && faultLink.get(currentID) == nextHopID) {
-							updateMessage(currentID);
-							requestMessage(currentID);
+							if (currentID!=controllerID) {
+								updateMessage(currentID);
+								requestMessage(currentID);
+							}
 							// 把检测到的faultlink删除
 							Set<Integer> neighborSet = new HashSet<>();
 							Integer[] nei = neighbors.get(currentID);
@@ -633,19 +639,20 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 								routingPath.put(nodeAfterFaultLink,
 										findOnePath(false, nodeAfterFaultLink, controllerID));
 								controllerMessage(nodeAfterFaultLink, controllerID, true);
-								
+
 							}
 							if (NEEDPAINTING) {
 								NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 									public void run() {
 										NetTopoApp.getApp().getPainter().paintConnection(currentID, nextHopID,
-												new RGB(255,0,0));
+												new RGB(255, 0, 0));
 									}
 								});
 							}
 							System.out.println("Fault Link " + currentID + " to " + nextHopID + " we meet");
 							return;
 						}
+
 						if (NEEDPAINTING) {
 							NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 								public void run() {
@@ -703,8 +710,10 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		Vector<Integer> result = new Vector<Integer>();
 		double ranku = ranks.get(new Integer(id)).doubleValue();
 		for (int i = 0; i < neighborsOf2HopsOfID.length; i++) {
-			if (awake.get(neighborsOf2HopsOfID[i]).booleanValue() && ranks.get(neighborsOf2HopsOfID[i]) < ranku) {
-				result.add(neighborsOf2HopsOfID[i]);
+			if (neighborsOf2HopsOfID[i] != controllerID) {
+				if (awake.get(neighborsOf2HopsOfID[i]).booleanValue() && ranks.get(neighborsOf2HopsOfID[i]) < ranku) {
+					result.add(neighborsOf2HopsOfID[i]);
+				}
 			}
 		}
 
@@ -903,7 +912,12 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 				+ (c.z - wsn.getCoordianteByID(controllerId).z) * (c.z - wsn.getCoordianteByID(controllerId).z));
 		distance = Math.sqrt(distance);
 		SinkNode sinknode = (SinkNode) wsn.getNodeByID(controllerId);
-		if (distance <= tr && distance <= sinknode.getMaxTR())
+		HashSet<Object> controllerNeighborsSet = new HashSet<>();
+		Integer[] controllerNeighborsArray = neighbors.get(controllerId);
+		for (int i = 0; i < controllerNeighborsArray.length; i++) {
+			controllerNeighborsSet.add(controllerNeighborsArray[i]);
+		}
+		if (distance <= tr && distance <= sinknode.getMaxTR() && controllerNeighborsSet.contains(currentId))
 			return true;
 		return false;
 	}
