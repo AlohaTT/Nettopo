@@ -380,7 +380,6 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		faultLink = new HashMap<Integer, Integer>();
 		controllerID = wsn.getSinkNodeId()[0];
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
-		int[] allNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());
 		controlRequestMessage = 0;
 		controlActionMessage = 0;
 		updateMessage = 0;
@@ -393,21 +392,23 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		}
 		// 随机linkFault
 		int totalLinkNumber = 0;
-		for (int i = 0; i < allNodesID.length; i++) {
-			int currentID = allNodesID[i];
+		int[] allNodesID = wsn.getAllNodesID();
+		for (int i = 0; i < allSensorNodesID.length; i++) {
+			int currentID = allSensorNodesID[i];
 			totalLinkNumber = totalLinkNumber + getNeighbor(currentID).length;
 		}
 		totalLinkNumber = totalLinkNumber / 2;
 		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
 		for (int i = 0; i < faultLinkNumber; i++) {
-			Integer[] neighbors = getNeighbor(allSensorNodesID[i]);
+			int faultLinkNode = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID())[0];
+			Integer[] neighbors = getNeighbor(faultLinkNode);
 			int[] neighborsIntValue = new int[neighbors.length];
 			for (int j = 0; j < neighborsIntValue.length; j++) {
 				neighborsIntValue[j] = neighbors[j];
 			}
 			int faultNeighbor = Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[0];
-			faultLink.put(allSensorNodesID[i], faultNeighbor);
-			faultLink.put(faultNeighbor, allSensorNodesID[i]);
+			faultLink.put(faultLinkNode, faultNeighbor);
+			faultLink.put(faultNeighbor, faultLinkNode);
 		}
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
@@ -459,7 +460,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		final List<Integer> path = routingPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
 		for (int i = array.length - 1; i > 0; i--) {
-			hops.put(array[i], hops.get(array[i])+1);
+			hops.put(array[i], hops.get(array[i]) + 1);
 			updateMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
@@ -498,7 +499,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		final List<Integer> path = routingPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
 		for (int i = array.length - 1; i > 0; i--) {
-			hops.put(array[i], hops.get(array[i])+1);
+			hops.put(array[i], hops.get(array[i]) + 1);
 			controlRequestMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
@@ -543,7 +544,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	/**
 	 * @param controllerID
 	 */
-	private boolean controllerMessage(int destinationID, int controllerID, boolean awake) {
+	private void controllerMessage(int destinationID, int controllerID, boolean awake) {
 		List<Integer> path = routingPath.get(destinationID);
 		PacketHeader packetHeader = new PacketHeader();
 		if (!awake) {
@@ -562,7 +563,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			packetHeader.setBehavior(1);
 		}
 		header.put(controllerID, packetHeader);// 设置header
-		return checkPacketHeaderAccordingToFlowTable(controllerID, packetHeader, path);
+		checkPacketHeaderAccordingToFlowTable(controllerID, packetHeader, path);
 	}
 
 	/**
@@ -570,7 +571,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	 * @param currentID
 	 * @param packetHeader
 	 */
-	private boolean checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
+	private void checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
 			List<Integer> path) {
 		if (currentID != controllerID) {
 			hops.put(currentID, hops.get(currentID) + 1);
@@ -612,24 +613,32 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 							updateMessage(currentID);
 							requestMessage(currentID);
 							// 把检测到的faultlink删除
-							LinkedList<Integer> neighborList = new LinkedList<>();
+							Set<Integer> neighborSet = new HashSet<>();
 							Integer[] nei = neighbors.get(currentID);
 							for (int i = 0; i < nei.length; i++) {
-								neighborList.add(nei[i]);
+								neighborSet.add(nei[i]);
 							}
-							neighborList.remove(nextHopID);
-							neighbors.put(currentID, neighborList.toArray(new Integer[neighborList.size()]));
-							ListIterator<Integer> listIterator = path.listIterator(path.indexOf(currentID));
+							neighborSet.remove(nextHopID);
+							neighbors.put(currentID, neighborSet.toArray(new Integer[neighborSet.size()]));
+							// 删除下一跳中neibortable里的当前节点
+							Set<Integer> nextHopNeighborSet = new HashSet<>();
+							Integer[] nextHopNei = neighbors.get(nextHopID);
+							for (int i = 0; i < nextHopNei.length; i++) {
+								nextHopNeighborSet.add(nextHopNei[i]);
+							}
+							nextHopNeighborSet.remove(currentID);
+							neighbors.put(nextHopID,
+									nextHopNeighborSet.toArray(new Integer[nextHopNeighborSet.size()]));
+							// 为fault link的后续节点重新规划路径
+							ListIterator<Integer> listIterator = path.listIterator(path.indexOf(currentID) + 1);
 							while (listIterator.hasNext()) {
 								Integer nodeAfterFaultLink = (Integer) listIterator.next();
 								routingPath.put(nodeAfterFaultLink,
 										findOnePath(false, nodeAfterFaultLink, controllerID));
+								controllerMessage(nodeAfterFaultLink, controllerID, true);
 							}
-//							int size = path.size()-1;
-//							controllerMessage(path.get(size-1), controllerID, true);
-//							System.out.println("Fault Link:" + faultLink.toString());
 							System.out.println("Fault Link " + currentID + " to " + nextHopID + " we meet");
-							return false;
+							return;
 						}
 						if (NEEDPAINTING) {
 							NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
@@ -639,6 +648,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 							});
 						}
 						checkPacketHeaderAccordingToFlowTable(nextHopID, packetHeader, path);
+
 					}
 
 				}
@@ -646,7 +656,6 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		} else {
 
 		}
-		return true;
 	}
 
 	/**
