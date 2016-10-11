@@ -392,7 +392,6 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		}
 		// 随机linkFault
 		int totalLinkNumber = 0;
-		int[] allNodesID = wsn.getAllNodesID();
 		for (int i = 0; i < allSensorNodesID.length; i++) {
 			int currentID = allSensorNodesID[i];
 			totalLinkNumber = totalLinkNumber + getNeighbor(currentID).length;
@@ -443,14 +442,13 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			int[] awakeNeighborsOf2HopsLessThanRanku = Util
 					.IntegerArray2IntArray(getAwakeNeighborsOf2HopsLessThanRanku(currentID));
 			if (atLeast_k_Neighbors(Nu, Cu) && qualifiedConnectedInCu(Cu, awakeNeighborsOf2HopsLessThanRanku)) {
-				requestMessage(currentID);
 				controllerMessage(currentID, controllerID, false);
-			} else {
 				requestMessage(currentID);
+			} else {
 				controllerMessage(currentID, controllerID, true);
+				requestMessage(currentID);
 			}
 		}
-
 	}
 
 	/**
@@ -459,20 +457,19 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private void updateMessage(Integer currentID) {
 		final List<Integer> path = routingPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
-		for (int i = array.length - 1; i > 0; i--) {
+		for (int i = array.length-1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			updateMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
-			// if (NEEDPAINTING) {
-			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-			// public void run() {
-			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
-			// nextNodeId,
-			// new RGB(128, 128, 128));
-			// }
-			// });
-			// }
+//			if (NEEDPAINTING) {
+//				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+//					public void run() {
+//						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
+//								new RGB(128, 128, 128));
+//					}
+//				});
+//			}
 		}
 	}
 
@@ -498,19 +495,19 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private void requestMessage(final Integer currentID) {
 		final List<Integer> path = routingPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
-		for (int i = array.length - 1; i > 0; i--) {
+		for (int i = array.length-1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			controlRequestMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
-			if (NEEDPAINTING) {
-				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
-								new RGB(128, 128, 128));
-					}
-				});
-			}
+//			if (NEEDPAINTING) {
+//				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+//					public void run() {
+//						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
+//								new RGB(128, 128, 128));
+//					}
+//				});
+//			}
 		}
 	}
 
@@ -636,6 +633,15 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 								routingPath.put(nodeAfterFaultLink,
 										findOnePath(false, nodeAfterFaultLink, controllerID));
 								controllerMessage(nodeAfterFaultLink, controllerID, true);
+								
+							}
+							if (NEEDPAINTING) {
+								NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+									public void run() {
+										NetTopoApp.getApp().getPainter().paintConnection(currentID, nextHopID,
+												new RGB(255,0,0));
+									}
+								});
 							}
 							System.out.println("Fault Link " + currentID + " to " + nextHopID + " we meet");
 							return;
