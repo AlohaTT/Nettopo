@@ -380,13 +380,14 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		faultLink = new HashMap<>();
 		controllerID = wsn.getSinkNodeId()[0];
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
+		int[] allNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());// 获得所有sensornode的
 		initializeRoutingPath(allSensorNodesID);
 		controlRequestMessage = 0;
 		controlActionMessage = 0;
 		updateMessage = 0;
 		broadcastMessage = 0;
 		// 随机linkFault
-		makeFaultLineRandomly(allSensorNodesID);
+		makeFaultLineRandomly(allNodesID);
 		System.out.println("Fault Links:"+faultLink.toString());
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
@@ -441,6 +442,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		}
 		totalLinkNumber = totalLinkNumber / 2;
 		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
+		System.out.println("Fault Link Number:"+faultLinkNumber);
 		for (int i = 0; i < faultLinkNumber; i++) {
 			int faultLinkNode = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID())[0];
 			Integer[] neighbors = getNeighbor(faultLinkNode);
