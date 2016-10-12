@@ -74,7 +74,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.05;
+		linkFaultRatio = 0.2;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -388,7 +388,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		broadcastMessage = 0;
 		// 随机linkFault
 		makeFaultLineRandomly(allNodesID);
-		System.out.println("Fault Links:"+faultLink.toString());
+		System.out.println("Fault Links:" + faultLink.toString());
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));
@@ -442,7 +442,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		}
 		totalLinkNumber = totalLinkNumber / 2;
 		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
-		System.out.println("Fault Link Number:"+faultLinkNumber);
+		System.out.println("Fault Link Number:" + faultLinkNumber);
 		for (int i = 0; i < faultLinkNumber; i++) {
 			int faultLinkNode = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID())[0];
 			Integer[] neighbors = getNeighbor(faultLinkNode);
@@ -454,19 +454,27 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			if (faultLink.containsKey(faultLinkNode)) {
 				if (!faultLink.get(faultLinkNode).contains(faultNeighbor)) {
 					faultLink.get(faultLinkNode).add(faultNeighbor);
-					LinkedList<Integer> list = new LinkedList<>();
-					list.add(faultLinkNode);
-					faultLink.put(faultNeighbor, list);
-				}else {
-					faultLink.get(faultLinkNode).add(faultNeighbor);
+					if (!faultLink.containsKey(faultNeighbor)) {
+						LinkedList<Integer> list = new LinkedList<>();
+						list.add(faultLinkNode);
+						faultLink.put(faultNeighbor, list);
+					}else {
+						faultLink.get(faultNeighbor).add(faultLinkNode);
+					}
 				}
 			} else {
 				LinkedList<Integer> list = new LinkedList<>();
 				list.add(faultNeighbor);
 				faultLink.put(faultLinkNode, list);
-				LinkedList<Integer> list2 = new LinkedList<>();
-				list2.add(faultLinkNode);
-				faultLink.put(faultNeighbor, list2);
+				if (!faultLink.containsKey(faultNeighbor)) {
+					LinkedList<Integer> list2 = new LinkedList<>();
+					list2.add(faultLinkNode);
+					faultLink.put(faultNeighbor, list2);
+				} else {
+					if (!faultLink.get(faultNeighbor).contains(faultLinkNode)) {
+						faultLink.get(faultNeighbor).add(faultLinkNode);
+					}
+				}
 			}
 		}
 	}
@@ -494,14 +502,15 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			updateMessage++;
 			final Integer currentNodeId = (Integer) array[i];
 			final Integer nextNodeId = (Integer) array[i - 1];
-			if (NEEDPAINTING) {
-				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						NetTopoApp.getApp().getPainter().paintConnection(currentNodeId, nextNodeId,
-								new RGB(128, 128, 128));
-					}
-				});
-			}
+			// if (NEEDPAINTING) {
+			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+			// public void run() {
+			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
+			// nextNodeId,
+			// new RGB(128, 128, 128));
+			// }
+			// });
+			// }
 		}
 	}
 
