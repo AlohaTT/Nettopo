@@ -74,7 +74,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.2;
+		linkFaultRatio = 0.05;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
