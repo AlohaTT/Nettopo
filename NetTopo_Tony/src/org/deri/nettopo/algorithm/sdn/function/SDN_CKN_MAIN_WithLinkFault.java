@@ -69,12 +69,12 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 2;
+		k = 5;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.05;
+		linkFaultRatio = 0.0;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -93,6 +93,13 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 				app.refresh();
 			}
 		});
+		int maxHops = 0;
+		for (List<Integer> path : routingPath.values()) {
+			if (path.size() - 1 > maxHops) {
+				maxHops = path.size();
+			}
+		}
+		System.out.println("Max-hops:" + maxHops);
 
 		Iterator<Integer> iterator = hops.values().iterator();
 		int totalHops = 0;
