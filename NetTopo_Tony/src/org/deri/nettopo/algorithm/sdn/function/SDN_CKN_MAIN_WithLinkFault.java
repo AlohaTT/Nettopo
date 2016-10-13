@@ -69,12 +69,12 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 2;
+		k = 1;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.2;
+		linkFaultRatio = 0.25;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -99,7 +99,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 				maxHops = path.size()-1;
 			}
 		}
-		System.out.println("Max-hops:" + maxHops);
+		System.out.println("k="+k+"\tMax-hops:" + maxHops);
 
 		Iterator<Integer> iterator = hops.values().iterator();
 		int totalHops = 0;
@@ -115,7 +115,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			totalHopsInSDCKN = totalHopsInSDCKN + path.size() - 1;
 		}
 		totalHopsInSDCKN = totalHopsInSDCKN * 2;
-		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
+//		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
 		System.out.println("Control Requst:" + controlRequestMessage + "\tControl Action:" + controlActionMessage
 				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage + "\n");
 		final StringBuffer message = new StringBuffer();
@@ -395,7 +395,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		broadcastMessage = 0;
 		// 随机linkFault
 		makeFaultLineRandomly(allNodesID);
-		System.out.println("Fault Links:" + faultLink.toString());
+//		System.out.println("Fault Links:" + faultLink.toString());
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
 				Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID()));
@@ -449,7 +449,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		}
 		totalLinkNumber = totalLinkNumber / 2;
 		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
-		System.out.println("Fault Link Number:" + faultLinkNumber);
+//		System.out.println("Fault Link Number:" + faultLinkNumber);
 		for (int i = 0; i < faultLinkNumber; i++) {
 			int faultLinkNode = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID())[0];
 			Integer[] neighbors = getNeighbor(faultLinkNode);
@@ -692,6 +692,23 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 								}
 
 							}
+							//更新routingpath中其他含有此fault link的后续节点
+							Iterator<Integer> nodeInRoutingPath = routingPath.keySet().iterator();
+							while(nodeInRoutingPath.hasNext()){
+								Integer next = nodeInRoutingPath.next();
+								if (next!=path.getLast()) {
+									LinkedList<Integer> nodePath = routingPath.get(next);
+									if (nodePath.contains(currentID)&&nodePath.getLast()!=currentID&&nodePath.get(nodePath.indexOf(currentID)+1)==nextHopID) {
+										ListIterator<Integer> listIterator2 = nodePath.listIterator(nodePath.indexOf(currentID)+1);
+										while (listIterator2.hasNext()) {
+											Integer nodeAfterFaultLink=listIterator2.next();
+											routingPath.put(next, findOnePath(false, nodeAfterFaultLink, controllerID));
+										}
+									}
+									
+								}
+							}
+							
 							if (NEEDPAINTING) {
 								NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 									public void run() {
@@ -700,7 +717,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 									}
 								});
 							}
-							System.out.println("Fault Link " + currentID + " to " + nextHopID + " we meet");
+//							System.out.println("Fault Link " + currentID + " to " + nextHopID + " we meet");
 							return;
 						}
 
