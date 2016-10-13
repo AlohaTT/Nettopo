@@ -50,7 +50,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private HashMap<Integer, Integer[]> neighborsOf2Hops;
 	private Map<Integer, Integer> hops;
 
-	private Map<Integer, List<Integer>> routingPath;
+	private Map<Integer, LinkedList<Integer>> routingPath;
 	private HashMap<Integer, Boolean> available;
 	private int controllerID;
 	private static boolean NEEDPAINTING = true;// 是否需要绘制路线
@@ -60,7 +60,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private int updateMessage;
 	private int broadcastMessage;
 	private double linkFaultRatio;
-	private HashMap<Integer, List<Integer>> faultLink;
+	private HashMap<Integer, LinkedList<Integer>> faultLink;
 
 	public SDN_CKN_MAIN_WithLinkFault(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -69,12 +69,12 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 5;
+		k = 2;
 		needInitialization = true;
-		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
+		routingPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.0;
+		linkFaultRatio = 0.2;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -96,7 +96,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		int maxHops = 0;
 		for (List<Integer> path : routingPath.values()) {
 			if (path.size() - 1 > maxHops) {
-				maxHops = path.size();
+				maxHops = path.size()-1;
 			}
 		}
 		System.out.println("Max-hops:" + maxHops);
@@ -109,7 +109,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		System.out.println("total hops:" + totalHops);
 
 		int totalHopsInSDCKN = 0;
-		Iterator<List<Integer>> pathIt = routingPath.values().iterator();
+		Iterator<LinkedList<Integer>> pathIt = routingPath.values().iterator();
 		while (pathIt.hasNext()) {
 			List<Integer> path = pathIt.next();
 			totalHopsInSDCKN = totalHopsInSDCKN + path.size() - 1;
@@ -117,7 +117,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		totalHopsInSDCKN = totalHopsInSDCKN * 2;
 		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
 		System.out.println("Control Requst:" + controlRequestMessage + "\tControl Action:" + controlActionMessage
-				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage);
+				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage + "\n");
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
@@ -465,7 +465,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 						LinkedList<Integer> list = new LinkedList<>();
 						list.add(faultLinkNode);
 						faultLink.put(faultNeighbor, list);
-					}else {
+					} else {
 						faultLink.get(faultNeighbor).add(faultLinkNode);
 					}
 				}
@@ -493,7 +493,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		// 通过tpgf算法查找每个节点到controller的路径,保存到routingPath
 		for (int i = 0; i < allSensorNodesID.length; i++) {
 			int currentID = allSensorNodesID[i];
-			List<Integer> path = findOnePath(false, currentID, controllerID);
+			LinkedList<Integer> path = findOnePath(false, currentID, controllerID);
 			routingPath.put(currentID, path);
 		}
 	}
@@ -591,7 +591,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	 * @param controllerID
 	 */
 	private void controllerMessage(int destinationID, int controllerID, boolean awake) {
-		List<Integer> path = routingPath.get(destinationID);
+		LinkedList<Integer> path = routingPath.get(destinationID);
 		PacketHeader packetHeader = new PacketHeader();
 		if (!awake) {
 			packetHeader.setSource(controllerID);
@@ -618,7 +618,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	 * @param packetHeader
 	 */
 	private void checkPacketHeaderAccordingToFlowTable(final int currentID, final PacketHeader packetHeader,
-			List<Integer> path) {
+			LinkedList<Integer> path) {
 		if (currentID != controllerID) {
 			hops.put(currentID, hops.get(currentID) + 1);
 			controlActionMessage = controlActionMessage + 1;
@@ -683,7 +683,13 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 								Integer nodeAfterFaultLink = (Integer) listIterator.next();
 								routingPath.put(nodeAfterFaultLink,
 										findOnePath(false, nodeAfterFaultLink, controllerID));
-								controllerMessage(nodeAfterFaultLink, controllerID, true);
+								if (nodeAfterFaultLink == path.getLast()) {
+									if (packetHeader.getState() == 0) {
+										controllerMessage(nodeAfterFaultLink, controllerID, false);
+									} else {
+										controllerMessage(nodeAfterFaultLink, controllerID, true);
+									}
+								}
 
 							}
 							if (NEEDPAINTING) {

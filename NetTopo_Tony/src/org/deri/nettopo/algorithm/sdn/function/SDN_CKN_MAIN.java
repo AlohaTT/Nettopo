@@ -66,7 +66,7 @@ public class SDN_CKN_MAIN implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 2;
+		k = 1;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, List<Integer>>());
 		available = new HashMap<Integer, Boolean>();
