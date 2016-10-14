@@ -69,12 +69,12 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 1;
+		k = 3;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.25;
+		linkFaultRatio = 0.15;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -384,6 +384,23 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 
 	private void CKN_Function() {
 		initialWork();
+		//连接所有的邻居节点
+		Iterator<Integer> neighborIt = neighbors.keySet().iterator();
+		while(neighborIt.hasNext()){
+			final Integer currentID = neighborIt.next();
+			final Integer[] neibors = neighbors.get(currentID);
+			for (int i = 0; i < neibors.length; i++) {
+				final int t=i;
+				if (NEEDPAINTING) {
+					NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+						public void run() {
+							NetTopoApp.getApp().getPainter().paintConnection(currentID, neibors[t],new RGB(169, 169, 169));
+						}
+					});
+				}
+			}
+		}
+		
 		faultLink = new HashMap<>();
 		controllerID = wsn.getSinkNodeId()[0];
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
@@ -565,13 +582,13 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	 */
 	private void sendAwakeRequstMessageToAllNeighbors(final Integer currentID) {
 		Integer[] neighborsId = getNeighbor(currentID);
-		if (NEEDPAINTING) {
-			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-				public void run() {
-					NetTopoApp.getApp().getPainter().paintNode(currentID, new RGB(255, 127, 80));
-				}
-			});
-		}
+//		if (NEEDPAINTING) {
+//			NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+//				public void run() {
+//					NetTopoApp.getApp().getPainter().paintNode(currentID, new RGB(255, 127, 80));
+//				}
+//			});
+//		}
 		for (int i = 0; i < neighborsId.length; i++) {
 			broadcastMessage++;
 			final int neighbor = neighborsId[i];

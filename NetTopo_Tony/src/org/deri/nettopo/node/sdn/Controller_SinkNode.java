@@ -5,7 +5,9 @@ package org.deri.nettopo.node.sdn;
 
 import java.util.HashMap;
 
+import org.deri.nettopo.node.NodeConfiguration;
 import org.deri.nettopo.node.SinkNode;
+import org.eclipse.swt.graphics.RGB;
 
 /**
  * @author Tony
