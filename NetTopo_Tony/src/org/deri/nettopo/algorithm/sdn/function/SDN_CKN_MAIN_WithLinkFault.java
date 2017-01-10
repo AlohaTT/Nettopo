@@ -61,6 +61,8 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	private int broadcastMessage;
 	private double linkFaultRatio;
 	private HashMap<Integer, LinkedList<Integer>> faultLink;
+	private int informMessage;
+	private int extraMessage;
 
 	public SDN_CKN_MAIN_WithLinkFault(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -74,7 +76,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.15;
+		linkFaultRatio = 0.05;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {
@@ -117,7 +119,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		totalHopsInSDCKN = totalHopsInSDCKN * 2;
 //		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
 		System.out.println("Control Requst:" + controlRequestMessage + "\tControl Action:" + controlActionMessage
-				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage + "\n");
+				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage + "\n"+"\tExtraMessage:"+ extraMessage);
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
@@ -410,8 +412,11 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		controlActionMessage = 0;
 		updateMessage = 0;
 		broadcastMessage = 0;
+		informMessage = 0;
+		extraMessage = 0;
 		// 随机linkFault
-		makeFaultLineRandomly(allNodesID);
+		makeFaultLinkRandomly(allNodesID);
+		sovleRoutingLinkFault();
 //		System.out.println("Fault Links:" + faultLink.toString());
 		// 获得所有邻居节点数小于等于K的节点id，同时对这些节点进行操作
 		Collection<Integer> nodeNeighborLessThanK = getNodeNeighborLessThanK(
@@ -447,18 +452,26 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 					.IntegerArray2IntArray(getAwakeNeighborsOf2HopsLessThanRanku(currentID));
 			if (atLeast_k_Neighbors(Nu, Cu) && qualifiedConnectedInCu(Cu, awakeNeighborsOf2HopsLessThanRanku)) {
 				requestMessage(currentID);
-				controllerMessage(currentID, controllerID, false);
+				controllMessage(currentID, controllerID, false);
 			} else {
 				requestMessage(currentID);
-				controllerMessage(currentID, controllerID, true);
+				controllMessage(currentID, controllerID, true);
 			}
 		}
 	}
 
 	/**
+	 * 
+	 */
+	private void sovleRoutingLinkFault() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/**
 	 * @param allSensorNodesID
 	 */
-	private void makeFaultLineRandomly(int[] allSensorNodesID) {
+	private void makeFaultLinkRandomly(int[] allSensorNodesID) {
 		int totalLinkNumber = 0;
 		for (int i = 0; i < allSensorNodesID.length; i++) {
 			int currentID = allSensorNodesID[i];
@@ -607,7 +620,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 	/**
 	 * @param controllerID
 	 */
-	private void controllerMessage(int destinationID, int controllerID, boolean awake) {
+	private void controllMessage(int destinationID, int controllerID, boolean awake) {
 		LinkedList<Integer> path = routingPath.get(destinationID);
 		PacketHeader packetHeader = new PacketHeader();
 		if (!awake) {
@@ -676,6 +689,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 							if (currentID != controllerID) {
 								updateMessage(currentID);
 								requestMessage(currentID);
+								extraMessage(currentID);
 							}
 							// 把检测到的faultlink删除
 							Set<Integer> neighborSet = new HashSet<>();
@@ -702,10 +716,12 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 										findOnePath(false, nodeAfterFaultLink, controllerID));
 								if (nodeAfterFaultLink == path.getLast()) {
 									if (packetHeader.getState() == 0) {
-										controllerMessage(nodeAfterFaultLink, controllerID, false);
+										controllMessage(nodeAfterFaultLink, controllerID, false);
 									} else {
-										controllerMessage(nodeAfterFaultLink, controllerID, true);
+										controllMessage(nodeAfterFaultLink, controllerID, true);
 									}
+								}else{
+									extraMessage(nodeAfterFaultLink);
 								}
 
 							}
@@ -720,6 +736,7 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 										while (listIterator2.hasNext()) {
 											Integer nodeAfterFaultLink=listIterator2.next();
 											routingPath.put(next, findOnePath(false, nodeAfterFaultLink, controllerID));
+											extraMessage(nodeAfterFaultLink);
 										}
 									}
 									
@@ -753,6 +770,52 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 			}
 		} else {
 
+		}
+	}
+
+	/**
+	 * @param currentID
+	 */
+	private void extraMessage(int currentID) {
+		final List<Integer> path = routingPath.get(currentID);
+		Integer[] array = path.toArray(new Integer[path.size()]);
+		for (int i = array.length - 1; i > 0; i--) {
+			hops.put(array[i], hops.get(array[i]) + 1);
+			extraMessage++;
+			final Integer currentNodeId = (Integer) array[i];
+			final Integer nextNodeId = (Integer) array[i - 1];
+			// if (NEEDPAINTING) {
+			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+			// public void run() {
+			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
+			// nextNodeId,
+			// new RGB(128, 128, 128));
+			// }
+			// });
+			// }
+		}
+	}
+
+	/**
+	 * @param nodeAfterFaultLink
+	 */
+	private void informMessage(Integer nodeAfterFaultLink) {
+		final List<Integer> path = routingPath.get(nodeAfterFaultLink);
+		Integer[] array = path.toArray(new Integer[path.size()]);
+		for (int i = array.length - 1; i > 0; i--) {
+			hops.put(array[i], hops.get(array[i]) + 1);
+			informMessage++;
+			final Integer currentNodeId = (Integer) array[i];
+			final Integer nextNodeId = (Integer) array[i - 1];
+			// if (NEEDPAINTING) {
+			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+			// public void run() {
+			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
+			// nextNodeId,
+			// new RGB(128, 128, 128));
+			// }
+			// });
+			// }
 		}
 	}
 
