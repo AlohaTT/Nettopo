@@ -2764,4 +2764,45 @@ DEBUG main org.apache.hadoop.security.UserGroupInformation - PrivilegedAction as
  DEBUG Thread-76 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - Thread[Thread-76,10,main]
  DEBUG Thread-77 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - Thread[Thread-77,10,main]
  DEBUG Thread-78 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - Thread[Thread-78,10,main]
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:28
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:46
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:35
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:34
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:29
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:81
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:56
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:30
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:43
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:23
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:24
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:24
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:42
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:25
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:20
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:38
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:26
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:42
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:61
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:24
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:17
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:45
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:22
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:41
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:44
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:22
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:24
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:19
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:59
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:26
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:31
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:20
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:132
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:45
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:116
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:24
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:36
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:23
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:35
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:93
+ DEBUG Timer-0 org.deri.nettopo.algorithm.sdn.function.SDN_CKN_MAIN2_MutilThread - ExtraMessage:31
  

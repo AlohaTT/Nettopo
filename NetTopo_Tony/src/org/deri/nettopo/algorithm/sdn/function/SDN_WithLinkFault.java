@@ -1,5 +1,12 @@
-package org.deri.nettopo.algorithm.sdn;
+package org.deri.nettopo.algorithm.sdn.function;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,8 +18,10 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
 import org.deri.nettopo.algorithm.AlgorFunc;
 import org.deri.nettopo.algorithm.Algorithm;
 import org.deri.nettopo.app.NetTopoApp;
@@ -20,6 +29,7 @@ import org.deri.nettopo.network.WirelessSensorNetwork;
 import org.deri.nettopo.node.NodeConfiguration;
 import org.deri.nettopo.node.SensorNode;
 import org.deri.nettopo.node.SinkNode;
+import org.deri.nettopo.node.sdn.NeighborTable;
 import org.deri.nettopo.node.sdn.PacketHeader;
 import org.deri.nettopo.node.sdn.SensorNode_SDN;
 import org.deri.nettopo.util.Coordinate;
@@ -31,7 +41,7 @@ import org.eclipse.swt.graphics.RGB;
  * 
  * 
  */
-public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
+public class SDN_WithLinkFault implements AlgorFunc {
 
 	private Algorithm algorithm;
 	private WirelessSensorNetwork wsn;
@@ -42,35 +52,40 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 	private int k;// the least awake neighbors
 	boolean needInitialization;
 	private HashMap<Integer, PacketHeader> header;
+	private HashMap<Integer, NeighborTable> neighborTable;
 	private HashMap<Integer, Integer[]> neighborsOf2Hops;
 	private Map<Integer, Integer> hops;
 
-	private Map<Integer, LinkedList<Integer>> routingPath;
+	private Map<Integer, LinkedList<Integer>> controllPath;
 	private HashMap<Integer, Boolean> available;
 	private int controllerID;
 	private static boolean NEEDPAINTING = true;// 是否需要绘制路线
+	private static Logger logger = Logger.getLogger(SDN_CKN_MAIN2_MutilThread.class);
 	private int controlRequestMessage;
 	private int controlActionMessage;
 	private int updateMessage;
-	private int broadcastMessage;
+	private int extraMessage;
 	private double linkFaultRatio;
 	private HashMap<Integer, LinkedList<Integer>> faultLink;
+	private HashMap<Integer, LinkedList<Integer>> nodesNeighborInControllPath;
 
-	public SDN_CKN_MAIN_WithLinkFault_RoutingPath(Algorithm algorithm) {
+	public SDN_WithLinkFault(Algorithm algorithm) {
 		this.algorithm = algorithm;
 		neighbors = new HashMap<Integer, Integer[]>();
 		awake = Collections.synchronizedMap(new HashMap<Integer, Boolean>());
+		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
 		k = 2;
 		needInitialization = true;
-		routingPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
+		controllPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
+		nodesNeighborInControllPath = new HashMap<Integer, LinkedList<Integer>>();
 		linkFaultRatio = 0.15;
 	}
 
-	public SDN_CKN_MAIN_WithLinkFault_RoutingPath() {
+	public SDN_WithLinkFault() {
 		this(null);
 	}
 
@@ -79,7 +94,7 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 			initializeWork();
 		}
 		resetAllNodesAwakeColor();
-		CKN_Function();
+		SDN_Function();
 		app.getPainter().rePaintAllNodes();
 		app.getDisplay().asyncExec(new Runnable() {
 			public void run() {
@@ -87,12 +102,12 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 			}
 		});
 		int maxHops = 0;
-		for (List<Integer> path : routingPath.values()) {
+		for (List<Integer> path : controllPath.values()) {
 			if (path.size() - 1 > maxHops) {
-				maxHops = path.size()-1;
+				maxHops = path.size() - 1;
 			}
 		}
-		System.out.println("k="+k+"\tMax-hops:" + maxHops);
+		System.out.println("k=" + k + "\tMax-hops:" + maxHops);
 
 		Iterator<Integer> iterator = hops.values().iterator();
 		int totalHops = 0;
@@ -102,19 +117,15 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 		System.out.println("total hops:" + totalHops);
 
 		int totalHopsInSDCKN = 0;
-		Iterator<LinkedList<Integer>> pathIt = routingPath.values().iterator();
+		Iterator<LinkedList<Integer>> pathIt = controllPath.values().iterator();
 		while (pathIt.hasNext()) {
 			List<Integer> path = pathIt.next();
 			totalHopsInSDCKN = totalHopsInSDCKN + path.size() - 1;
 		}
 		totalHopsInSDCKN = totalHopsInSDCKN * 2;
-//		System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
-		System.out.println("Control Requst:" + controlRequestMessage + "\tControl Action:" + controlActionMessage
-				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage + "\n");
+		System.out.println("ExtraMessage:" + extraMessage);
 		final StringBuffer message = new StringBuffer();
-		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
-		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
-				+ Arrays.toString(activeSensorNodes));
+		message.append("ExtraMessage:" + extraMessage);
 		app.getDisplay().asyncExec(new Runnable() {
 			public void run() {
 				NetTopoApp.getApp().refresh();
@@ -123,6 +134,14 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 				// app.cmd_repaintNetwork();
 			}
 		});
+		try {
+			FileWriter fw = new FileWriter(new File("/Users/tony/Desktop/result.txt"),true);
+			fw.write(extraMessage+"\n");
+			fw.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 
@@ -141,8 +160,8 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 			initializeWork();
 		}
 		setNEEDPAINTING(false);
-		CKN_Function();
-		CKN_Function();
+		SDN_Function();
+		SDN_Function();
 	}
 
 	/****************************************************************************/
@@ -262,7 +281,7 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 		}
 		return nowAwakeNeighbor.toArray(new Integer[nowAwakeNeighbor.size()]);
 	}
-	
+
 	/**
 	 * to get connection of id with id's neighbor in array
 	 * 
@@ -302,68 +321,80 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 		}
 	}
 
-	private void CKN_Function() {
+	private void SDN_Function() {
 		initialWork();
-		//连接所有的邻居节点
-		Iterator<Integer> neighborIt = neighbors.keySet().iterator();
-		while(neighborIt.hasNext()){
-			final Integer currentID = neighborIt.next();
-			final Integer[] neibors = neighbors.get(currentID);
-			for (int i = 0; i < neibors.length; i++) {
-				final int t=i;
-				if (NEEDPAINTING) {
-					NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-						public void run() {
-							NetTopoApp.getApp().getPainter().paintConnection(currentID, neibors[t],new RGB(169, 169, 169));
-						}
-					});
-				}
-			}
-		}
-		
+		connectAllNeighbors();
 		faultLink = new HashMap<>();
 		controllerID = wsn.getSinkNodeId()[0];
-		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
-		int[] allNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());// 获得所有sensornode的
-		initializeRoutingPath(allSensorNodesID);
+		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());
+		int[] allNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());
+		initializeControllPath(allSensorNodesID);
+		initializeNodesNeighborInControllPath(allNodesID);
 		controlRequestMessage = 0;
 		controlActionMessage = 0;
 		updateMessage = 0;
-		broadcastMessage = 0;
+		extraMessage = 0;
 		// 随机linkFault
-		makeFaultLinkRandomly(allNodesID);
-		sovleRoutingLinkFault();
-		
-	}
-
-	/**
-	 * 
-	 */
-	private void sovleRoutingLinkFault() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	/**
-	 * @param allSensorNodesID
-	 */
-	private void makeFaultLinkRandomly(int[] allSensorNodesID) {
-		int totalLinkNumber = 0;
-		for (int i = 0; i < allSensorNodesID.length; i++) {
-			int currentID = allSensorNodesID[i];
-			totalLinkNumber = totalLinkNumber + getNeighbor(currentID).length;
+		// makeFaultLinkRandomly(allNodesID);
+		makeFaultLinkRandomlyInControllPath(allNodesID);
+		for (int currentID : allSensorNodesID) {
+			requestMessage(currentID);
+			controllMessage(currentID, controllerID, true);
 		}
-		totalLinkNumber = totalLinkNumber / 2;
-		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
-//		System.out.println("Fault Link Number:" + faultLinkNumber);
-		for (int i = 0; i < faultLinkNumber; i++) {
-			final int faultLinkNode = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID())[0];
-			Integer[] neighbors = getNeighbor(faultLinkNode);
-			int[] neighborsIntValue = new int[neighbors.length];
-			for (int j = 0; j < neighborsIntValue.length; j++) {
-				neighborsIntValue[j] = neighbors[j];
+	}
+
+	/**
+	 * @param allNodesID
+	 */
+	private void initializeNodesNeighborInControllPath(int[] allNodesID) {
+		for (int nodeID : allNodesID) {
+			nodesNeighborInControllPath.put(nodeID, new LinkedList<Integer>());
+		}
+		Iterator<Integer> iterator = controllPath.keySet().iterator();
+		while (iterator.hasNext()) {
+			Integer nodeID = (Integer) iterator.next();// nodeID表示要查找controllPath的节点id
+			Iterator<Integer> controllPathIt = controllPath.get(nodeID).iterator();
+			while (controllPathIt.hasNext()) {
+				Integer currentID = (Integer) controllPathIt.next();// controllPath中链表中的节点
+				if (currentID != nodeID) {
+					if (!nodesNeighborInControllPath.get(currentID)
+							.contains(controllPath.get(nodeID).get(controllPath.get(nodeID).indexOf(currentID) + 1))) {
+
+						nodesNeighborInControllPath.get(currentID)
+								.add(controllPath.get(nodeID).get(controllPath.get(nodeID).indexOf(currentID) + 1));
+					}
+				}
 			}
-			final int faultNeighbor = Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[0];
+
+		}
+	}
+
+	/**
+	 * @param allNodesID
+	 */
+	private void makeFaultLinkRandomlyInControllPath(int[] allNodesID) {
+		int totalLinkNumber = 0;
+		Iterator<Integer> iterator = nodesNeighborInControllPath.keySet().iterator();
+		ArrayList<Integer> nodelist = new ArrayList<>();// 保存不在边界上的节点
+		while (iterator.hasNext()) {
+			Integer nodeID = (Integer) iterator.next();
+			totalLinkNumber += nodesNeighborInControllPath.get(nodeID).size();
+			if (!nodesNeighborInControllPath.get(nodeID).isEmpty()) {
+				nodelist.add(nodeID);
+			}
+		}
+		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
+		HashMap<Integer, LinkedList<Integer>> copyNodesNeighborInControllPath = new HashMap<>();
+		copyNodesNeighborInControllPath.putAll(nodesNeighborInControllPath);
+		for (int i = 0; i < faultLinkNumber; i++) {
+			Random random = new Random();
+			int faultLinkNode = nodelist.get(random.nextInt(nodelist.size())).intValue();
+			int faultNeighbor = copyNodesNeighborInControllPath.get(faultLinkNode)
+					.get(random.nextInt(nodesNeighborInControllPath.get(faultLinkNode).size())).intValue();
+			copyNodesNeighborInControllPath.get(faultLinkNode).removeFirstOccurrence(faultNeighbor);
+			if (copyNodesNeighborInControllPath.get(faultLinkNode).size() == 0) {
+				nodelist.remove(nodelist.indexOf(faultLinkNode));
+			}
 			if (faultLink.containsKey(faultLinkNode)) {
 				if (!faultLink.get(faultLinkNode).contains(faultNeighbor)) {
 					faultLink.get(faultLinkNode).add(faultNeighbor);
@@ -389,13 +420,27 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 					}
 				}
 			}
-			if (NEEDPAINTING) {
-				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						NetTopoApp.getApp().getPainter().paintConnection(faultLinkNode, faultNeighbor,
-								new RGB(255, 0, 0));
-					}
-				});
+		}
+	}
+
+	/**
+	 * 连接所有邻居节点
+	 */
+	private void connectAllNeighbors() {
+		Iterator<Integer> neighborIt = neighbors.keySet().iterator();
+		while (neighborIt.hasNext()) {
+			final Integer currentID = neighborIt.next();
+			final Integer[] neibors = neighbors.get(currentID);
+			for (int i = 0; i < neibors.length; i++) {
+				final int t = i;
+				if (NEEDPAINTING) {
+					NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
+						public void run() {
+							NetTopoApp.getApp().getPainter().paintConnection(currentID, neibors[t],
+									new RGB(169, 169, 169));
+						}
+					});
+				}
 			}
 		}
 	}
@@ -403,12 +448,60 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 	/**
 	 * @param allSensorNodesID
 	 */
-	private void initializeRoutingPath(int[] allSensorNodesID) {
-		// 通过tpgf算法查找每个节点到controller的路径,保存到routingPath
+	private void makeFaultLinkRandomly(int[] allSensorNodesID) {
+		int totalLinkNumber = 0;
+		for (int i = 0; i < allSensorNodesID.length; i++) {
+			int currentID = allSensorNodesID[i];
+			totalLinkNumber = totalLinkNumber + getNeighbor(currentID).length;
+		}
+		totalLinkNumber = totalLinkNumber / 2;
+		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
+		// System.out.println("Fault Link Number:" + faultLinkNumber);
+		for (int i = 0; i < faultLinkNumber; i++) {
+			int faultLinkNode = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID())[0];
+			Integer[] neighbors = getNeighbor(faultLinkNode);
+			int[] neighborsIntValue = new int[neighbors.length];
+			for (int j = 0; j < neighborsIntValue.length; j++) {
+				neighborsIntValue[j] = neighbors[j];
+			}
+			int faultNeighbor = Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[0];
+			if (faultLink.containsKey(faultLinkNode)) {
+				if (!faultLink.get(faultLinkNode).contains(faultNeighbor)) {
+					faultLink.get(faultLinkNode).add(faultNeighbor);
+					if (!faultLink.containsKey(faultNeighbor)) {
+						LinkedList<Integer> list = new LinkedList<>();
+						list.add(faultLinkNode);
+						faultLink.put(faultNeighbor, list);
+					} else {
+						faultLink.get(faultNeighbor).add(faultLinkNode);
+					}
+				}
+			} else {
+				LinkedList<Integer> list = new LinkedList<>();
+				list.add(faultNeighbor);
+				faultLink.put(faultLinkNode, list);
+				if (!faultLink.containsKey(faultNeighbor)) {
+					LinkedList<Integer> list2 = new LinkedList<>();
+					list2.add(faultLinkNode);
+					faultLink.put(faultNeighbor, list2);
+				} else {
+					if (!faultLink.get(faultNeighbor).contains(faultLinkNode)) {
+						faultLink.get(faultNeighbor).add(faultLinkNode);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param allSensorNodesID
+	 */
+	private void initializeControllPath(int[] allSensorNodesID) {
+		// 通过tpgf算法查找每个节点到controller的路径,保存到controllPath
 		for (int i = 0; i < allSensorNodesID.length; i++) {
 			int currentID = allSensorNodesID[i];
 			LinkedList<Integer> path = findOnePath(false, currentID, controllerID);
-			routingPath.put(currentID, path);
+			controllPath.put(currentID, path);
 		}
 	}
 
@@ -416,55 +509,31 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 	 * @param currentID
 	 */
 	private void updateMessage(Integer currentID) {
-		final List<Integer> path = routingPath.get(currentID);
+		final List<Integer> path = controllPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
 		for (int i = array.length - 1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			updateMessage++;
-			final Integer currentNodeId = (Integer) array[i];
-			final Integer nextNodeId = (Integer) array[i - 1];
-			// if (NEEDPAINTING) {
-			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-			// public void run() {
-			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
-			// nextNodeId,
-			// new RGB(128, 128, 128));
-			// }
-			// });
-			// }
 		}
 	}
-
 
 	/**
 	 * @param currentID
 	 */
 	private void requestMessage(final Integer currentID) {
-		final List<Integer> path = routingPath.get(currentID);
+		final List<Integer> path = controllPath.get(currentID);
 		Integer[] array = path.toArray(new Integer[path.size()]);
 		for (int i = array.length - 1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			controlRequestMessage++;
-			final Integer currentNodeId = (Integer) array[i];
-			final Integer nextNodeId = (Integer) array[i - 1];
-			// if (NEEDPAINTING) {
-			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-			// public void run() {
-			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
-			// nextNodeId,
-			// new RGB(128, 128, 128));
-			// }
-			// });
-			// }
 		}
 	}
-
 
 	/**
 	 * @param controllerID
 	 */
-	private void controllerMessage(int destinationID, int controllerID, boolean awake) {
-		LinkedList<Integer> path = routingPath.get(destinationID);
+	private void controllMessage(int destinationID, int controllerID, boolean awake) {
+		LinkedList<Integer> path = controllPath.get(destinationID);
 		PacketHeader packetHeader = new PacketHeader();
 		if (!awake) {
 			packetHeader.setSource(controllerID);
@@ -530,8 +599,9 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 						final Integer nextHopID = path.get(path.indexOf(currentID) + 1);
 						if (faultLink.containsKey(currentID) && faultLink.get(currentID).contains(nextHopID)) {
 							if (currentID != controllerID) {
-								updateMessage(currentID);
+								// updateMessage(currentID);
 								requestMessage(currentID);
+								extraMessage(currentID);
 							}
 							// 把检测到的faultlink删除
 							Set<Integer> neighborSet = new HashSet<>();
@@ -554,34 +624,39 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 							ListIterator<Integer> listIterator = path.listIterator(path.indexOf(currentID) + 1);
 							while (listIterator.hasNext()) {
 								Integer nodeAfterFaultLink = (Integer) listIterator.next();
-								routingPath.put(nodeAfterFaultLink,
+								controllPath.put(nodeAfterFaultLink,
 										findOnePath(false, nodeAfterFaultLink, controllerID));
 								if (nodeAfterFaultLink == path.getLast()) {
 									if (packetHeader.getState() == 0) {
-										controllerMessage(nodeAfterFaultLink, controllerID, false);
+										controllMessage(nodeAfterFaultLink, controllerID, false);
 									} else {
-										controllerMessage(nodeAfterFaultLink, controllerID, true);
+										controllMessage(nodeAfterFaultLink, controllerID, true);
 									}
 								}
+								extraMessage(nodeAfterFaultLink);
 
 							}
-							//更新routingpath中其他含有此fault link的后续节点
-							Iterator<Integer> nodeInRoutingPath = routingPath.keySet().iterator();
-							while(nodeInRoutingPath.hasNext()){
+							// 更新routingpath中其他含有此fault link的后续节点
+							Iterator<Integer> nodeInRoutingPath = controllPath.keySet().iterator();
+							while (nodeInRoutingPath.hasNext()) {
 								Integer next = nodeInRoutingPath.next();
-								if (next!=path.getLast()) {
-									LinkedList<Integer> nodePath = routingPath.get(next);
-									if (nodePath.contains(currentID)&&nodePath.getLast()!=currentID&&nodePath.get(nodePath.indexOf(currentID)+1)==nextHopID) {
-										ListIterator<Integer> listIterator2 = nodePath.listIterator(nodePath.indexOf(currentID)+1);
+								if (next != path.getLast()) {
+									LinkedList<Integer> nodePath = controllPath.get(next);
+									if (nodePath.contains(currentID) && nodePath.getLast() != currentID
+											&& nodePath.get(nodePath.indexOf(currentID) + 1) == nextHopID) {
+										ListIterator<Integer> listIterator2 = nodePath
+												.listIterator(nodePath.indexOf(currentID) + 1);
 										while (listIterator2.hasNext()) {
-											Integer nodeAfterFaultLink=listIterator2.next();
-											routingPath.put(next, findOnePath(false, nodeAfterFaultLink, controllerID));
+											Integer nodeAfterFaultLink = listIterator2.next();
+											controllPath.put(next,
+													findOnePath(false, nodeAfterFaultLink, controllerID));
+											extraMessage(nodeAfterFaultLink);
 										}
 									}
-									
+
 								}
 							}
-							
+
 							if (NEEDPAINTING) {
 								NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
 									public void run() {
@@ -590,7 +665,8 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 									}
 								});
 							}
-//							System.out.println("Fault Link " + currentID + " to " + nextHopID + " we meet");
+							// System.out.println("Fault Link " + currentID + "
+							// to " + nextHopID + " we meet");
 							return;
 						}
 
@@ -613,15 +689,28 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 	}
 
 	/**
+	 * @param currentID
+	 */
+	private void extraMessage(int currentID) {
+		final List<Integer> path = controllPath.get(currentID);
+		Integer[] array = path.toArray(new Integer[path.size()]);
+		for (int i = array.length - 1; i > 0; i--) {
+			hops.put(array[i], hops.get(array[i]) + 1);
+			extraMessage++;
+		}
+	}
+
+	/**
 	 * 初始化工作
 	 */
 	private void initialWork() {
 		ranks = getRankForAllNodes();
 		initializeNeighbors();
+		initialNeiborTable();
 		initializeHeader();
 		initializeNeighborsOf2Hops();
 		initializeAvailable();
-		routingPath.clear();
+		controllPath.clear();
 		initializeHops();
 	}
 
@@ -645,8 +734,6 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 		}
 	}
 
-
-
 	/**
 	 * 初始化Header
 	 */
@@ -659,6 +746,23 @@ public class SDN_CKN_MAIN_WithLinkFault_RoutingPath implements AlgorFunc {
 
 	}
 
+	/**
+	 * 初始化NeiborTable
+	 */
+	private void initialNeiborTable() {
+		int[] allNodesID = wsn.getAllNodesID();
+
+		for (int currentId : allNodesID) {
+			Integer[] neighborId = getNeighbor(currentId);
+			NeighborTable nt = new NeighborTable();
+			for (int i = 0; i < neighborId.length; i++) {
+				nt.getNeighborIds().add(neighborId[i]);
+				nt.getRank().put(neighborId[i], ranks.get(neighborId[i]));
+				nt.getState().put(neighborId[i], awake.get(neighborId[i]));
+			}
+			neighborTable.put(currentId, nt);
+		}
+	}
 
 	public Algorithm getAlgorithm() {
 		return algorithm;
