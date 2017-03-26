@@ -277,6 +277,10 @@ public class WirelessSensorNetwork implements Serializable {
 				resetNodeColorByID(nodeID, NodeConfiguration.HostNodeColorRGB);
 			} else if (name.contains("Sink")) {
 				resetNodeColorByID(nodeID, NodeConfiguration.SinkNodeColorRGB);
+			} else if (name.contains("GlobalController")) {
+				resetNodeColorByID(nodeID, NodeConfiguration.GlobalControllerRGB);
+			} else if (name.contains("LocalController")) {
+				resetNodeColorByID(nodeID, NodeConfiguration.LocalControllerRGB);
 			}
 		}
 	}
@@ -945,5 +949,45 @@ public class WirelessSensorNetwork implements Serializable {
 		return Util.IntegerArray2IntArray(result);
 		
 	}
+	public int[] getControllerId() {
+		int[] allNodesId = this.getAllNodesID();
+		LinkedList<Integer> array = new LinkedList<Integer>();
+		for(int i=0;i<allNodesId.length;i++){
+			if(getNodeByID(allNodesId[i]).getClass().getSimpleName().contains("Controller")){
+				array.add(allNodesId[i]);
+			}
+		}
+		Integer[] result = array.toArray(new Integer[array.size()]);
+		
+		return Util.IntegerArray2IntArray(result);
+		
+	}
+	
+	public int[] getLocalControllerId() {
+		int[] allNodesId = this.getAllNodesID();
+		LinkedList<Integer> array = new LinkedList<Integer>();
+		for(int i=0;i<allNodesId.length;i++){
+			if(getNodeByID(allNodesId[i]).getClass().getSimpleName().contains("LocalController")){
+				array.add(allNodesId[i]);
+			}
+		}
+		Integer[] result = array.toArray(new Integer[array.size()]);
+		
+		return Util.IntegerArray2IntArray(result);
+		
+	}
 
+	public int[] getGlobaControllerId() {
+		int[] allNodesId = this.getAllNodesID();
+		LinkedList<Integer> array = new LinkedList<Integer>();
+		for(int i=0;i<allNodesId.length;i++){
+			if(getNodeByID(allNodesId[i]).getClass().getSimpleName().contains("GlobalController")){
+				array.add(allNodesId[i]);
+			}
+		}
+		Integer[] result = array.toArray(new Integer[array.size()]);
+		
+		return Util.IntegerArray2IntArray(result);
+		
+	}
 }

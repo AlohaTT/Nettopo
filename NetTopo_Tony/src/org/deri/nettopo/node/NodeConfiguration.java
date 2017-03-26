@@ -51,4 +51,7 @@ public class NodeConfiguration {
 	public static final RGB DeadNodeRGB = new RGB(0,0,0);
 	public static final RGB UnConnectNodeRGB = new RGB(2,12,193);
 	
+	public static final RGB GlobalControllerRGB = new RGB(52,137,61);
+	public static final RGB LocalControllerRGB = new RGB(237,5,64);
+	
 }

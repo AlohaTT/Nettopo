@@ -1583,9 +1583,10 @@ public class NetTopoApp {
 							nodeFocused = true;
 
 							currentSelectedNode = wsn.getNodeByID(id_minDis);
-							painter.paintCircle(new Coordinate(original.x,
-									original.y), currentSelectedNode
-									.getAttrValue("Max TR"));
+							if (currentSelectedNode.getAttrValue("Max TR")!=null) {
+								painter.paintCircle(new Coordinate(original.x, original.y),
+										currentSelectedNode.getAttrValue("Max TR"));
+							}
 							refresh();
 						} else {// ------------------------------------------if
 								// node is out of node clear the paints------
