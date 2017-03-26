@@ -1,10 +1,6 @@
 package org.deri.nettopo.algorithm.sdn.function;
 
-import java.io.BufferedOutputStream;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,7 +45,6 @@ public class SDN_WithLinkFault implements AlgorFunc {
 	private HashMap<Integer, Double> ranks;
 	private HashMap<Integer, Integer[]> neighbors;
 	private Map<Integer, Boolean> awake;
-	private int k;// the least awake neighbors
 	boolean needInitialization;
 	private HashMap<Integer, PacketHeader> header;
 	private HashMap<Integer, NeighborTable> neighborTable;
@@ -68,6 +63,7 @@ public class SDN_WithLinkFault implements AlgorFunc {
 	private double linkFaultRatio;
 	private HashMap<Integer, LinkedList<Integer>> faultLink;
 	private HashMap<Integer, LinkedList<Integer>> nodesNeighborInControllPath;
+	private static String savePath="D:/result.txt";
 
 	public SDN_WithLinkFault(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -76,7 +72,6 @@ public class SDN_WithLinkFault implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 2;
 		needInitialization = true;
 		controllPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
 		available = new HashMap<Integer, Boolean>();
@@ -107,7 +102,7 @@ public class SDN_WithLinkFault implements AlgorFunc {
 				maxHops = path.size() - 1;
 			}
 		}
-		System.out.println("k=" + k + "\tMax-hops:" + maxHops);
+		System.out.println("\tMax-hops:" + maxHops);
 
 		Iterator<Integer> iterator = hops.values().iterator();
 		int totalHops = 0;
@@ -135,11 +130,10 @@ public class SDN_WithLinkFault implements AlgorFunc {
 			}
 		});
 		try {
-			FileWriter fw = new FileWriter(new File("/Users/tony/Desktop/result.txt"),true);
+			FileWriter fw = new FileWriter(new File(savePath),true);
 			fw.write(extraMessage+"\n");
 			fw.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -261,13 +255,7 @@ public class SDN_WithLinkFault implements AlgorFunc {
 		setNeedInitialization(false);
 	}
 
-	/************
-	 * the above methods are to initialise the CKN fields
-	 ***************/
-
-	/************
-	 * the following methods are to be used in CKN_Function
-	 *************/
+	
 
 	private Integer[] getAwakeNeighbors(int id) {
 		HashSet<Integer> nowAwakeNeighbor = new HashSet<Integer>();
@@ -445,53 +433,6 @@ public class SDN_WithLinkFault implements AlgorFunc {
 		}
 	}
 
-	/**
-	 * @param allSensorNodesID
-	 */
-	private void makeFaultLinkRandomly(int[] allSensorNodesID) {
-		int totalLinkNumber = 0;
-		for (int i = 0; i < allSensorNodesID.length; i++) {
-			int currentID = allSensorNodesID[i];
-			totalLinkNumber = totalLinkNumber + getNeighbor(currentID).length;
-		}
-		totalLinkNumber = totalLinkNumber / 2;
-		int faultLinkNumber = (int) (totalLinkNumber * linkFaultRatio);
-		// System.out.println("Fault Link Number:" + faultLinkNumber);
-		for (int i = 0; i < faultLinkNumber; i++) {
-			int faultLinkNode = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID())[0];
-			Integer[] neighbors = getNeighbor(faultLinkNode);
-			int[] neighborsIntValue = new int[neighbors.length];
-			for (int j = 0; j < neighborsIntValue.length; j++) {
-				neighborsIntValue[j] = neighbors[j];
-			}
-			int faultNeighbor = Util.generateDisorderedIntArrayWithExistingArray(neighborsIntValue)[0];
-			if (faultLink.containsKey(faultLinkNode)) {
-				if (!faultLink.get(faultLinkNode).contains(faultNeighbor)) {
-					faultLink.get(faultLinkNode).add(faultNeighbor);
-					if (!faultLink.containsKey(faultNeighbor)) {
-						LinkedList<Integer> list = new LinkedList<>();
-						list.add(faultLinkNode);
-						faultLink.put(faultNeighbor, list);
-					} else {
-						faultLink.get(faultNeighbor).add(faultLinkNode);
-					}
-				}
-			} else {
-				LinkedList<Integer> list = new LinkedList<>();
-				list.add(faultNeighbor);
-				faultLink.put(faultLinkNode, list);
-				if (!faultLink.containsKey(faultNeighbor)) {
-					LinkedList<Integer> list2 = new LinkedList<>();
-					list2.add(faultLinkNode);
-					faultLink.put(faultNeighbor, list2);
-				} else {
-					if (!faultLink.get(faultNeighbor).contains(faultLinkNode)) {
-						faultLink.get(faultNeighbor).add(faultLinkNode);
-					}
-				}
-			}
-		}
-	}
 
 	/**
 	 * @param allSensorNodesID
@@ -776,13 +717,7 @@ public class SDN_WithLinkFault implements AlgorFunc {
 		this.needInitialization = needInitialization;
 	}
 
-	public int getK() {
-		return k;
-	}
 
-	public void setK(int k) {
-		this.k = k;
-	}
 
 	@Override
 	public String getResult() {
