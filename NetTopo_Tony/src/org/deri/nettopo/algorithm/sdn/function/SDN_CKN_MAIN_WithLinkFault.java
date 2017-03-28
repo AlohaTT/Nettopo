@@ -71,12 +71,12 @@ public class SDN_CKN_MAIN_WithLinkFault implements AlgorFunc {
 		neighborTable = new HashMap<Integer, NeighborTable>();
 		header = new HashMap<Integer, PacketHeader>();
 		neighborsOf2Hops = new HashMap<Integer, Integer[]>();
-		k = 2;
+		k = 3;
 		needInitialization = true;
 		routingPath = Collections.synchronizedMap(new HashMap<Integer, LinkedList<Integer>>());
 		available = new HashMap<Integer, Boolean>();
 		hops = new HashMap<Integer, Integer>();
-		linkFaultRatio = 0.05;
+		linkFaultRatio = 0;
 	}
 
 	public SDN_CKN_MAIN_WithLinkFault() {

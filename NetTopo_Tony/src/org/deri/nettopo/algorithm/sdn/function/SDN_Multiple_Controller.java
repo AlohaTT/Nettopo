@@ -2,7 +2,6 @@ package org.deri.nettopo.algorithm.sdn.function;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,11 +60,9 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 	private int broadcastMessage;
 	private double linkFaultRatio;
 	private HashMap<Integer, LinkedList<Integer>> faultLink;
-	private int informMessage;
 	private int extraMessage;
 	private HashMap<Integer, List<Integer>> cluster;
 	private HashMap<Integer, Integer> nearestController;
-	private int globalController;
 
 	public SDN_Multiple_Controller(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -107,14 +104,14 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 				maxHops = path.size() - 1;
 			}
 		}
-		System.out.println("k=" + k + "\tMax-hops:" + maxHops);
+//		System.out.println("k=" + k + "\tMax-hops:" + maxHops);
 
 		Iterator<Integer> iterator = hops.values().iterator();
 		int totalHops = 0;
 		while (iterator.hasNext()) {
 			totalHops = totalHops + iterator.next();
 		}
-		System.out.println("total hops:" + totalHops);
+//		System.out.println("total hops:" + totalHops);
 
 		int totalHopsInSDCKN = 0;
 		Iterator<LinkedList<Integer>> pathIt = routingPath.values().iterator();
@@ -124,9 +121,9 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		}
 		totalHopsInSDCKN = totalHopsInSDCKN * 2;
 		// System.out.println("total hops in SDCKN:" + totalHopsInSDCKN);
-		System.out.println("Control Requst:" + controlRequestMessage + "\tControl Action:" + controlActionMessage
-				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage + "\n"
-				+ "\tExtraMessage:" + extraMessage);
+//		System.out.println("Control Requst:" + controlRequestMessage + "\tControl Action:" + controlActionMessage
+//				+ "\tUpdateMessage:" + updateMessage + "\tBroadcastMessage:" + broadcastMessage + "\n"
+//				+ "\tExtraMessage:" + extraMessage);
 		final StringBuffer message = new StringBuffer();
 		int[] activeSensorNodes = NetTopoApp.getApp().getNetwork().getSensorActiveNodes();
 		message.append("k=" + k + ", Number of active nodes is:" + activeSensorNodes.length + ", they are: "
@@ -392,8 +389,7 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		initialWork();
 		// 连接所有的邻居节点
 		connectAllNeighbors();
-
-		globalController = wsn.getGlobaControllerId()[0];
+		int globalController = wsn.getGlobaControllerId()[0];
 		allLocalControllerID = wsn.getLocalControllerId();
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
 		int[] allNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());// 获得所有sensornode的
@@ -401,11 +397,10 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		cknFunction();
 		globalControllerSendMessage();
 		localControllerSendMessage();
-
 	}
 
 	/**
-	 * 
+	 * 用线将所有sensor的邻居节点连接起来
 	 */
 	private void connectAllNeighbors() {
 		Iterator<Integer> neighborIt = neighbors.keySet().iterator();
@@ -451,7 +446,7 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 	}
 
 	/**
-	 * 
+	 * 全局控制器向局部控制器发送消息
 	 */
 	private void globalControllerSendMessage() {
 		final int globaControllerId = wsn.getGlobaControllerId()[0];
@@ -468,7 +463,7 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 	}
 
 	/**
-	 * 
+	 * 局部控制器向串联起节点发送消息
 	 */
 	private void localControllerSendMessage() {
 		for (int cID : allLocalControllerID) {
@@ -570,35 +565,9 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		for (int i = array.length - 1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			updateMessage++;
-			final Integer currentNodeId = (Integer) array[i];
-			final Integer nextNodeId = (Integer) array[i - 1];
-			// if (NEEDPAINTING) {
-			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-			// public void run() {
-			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
-			// nextNodeId,
-			// new RGB(128, 128, 128));
-			// }
-			// });
-			// }
 		}
 	}
 
-	/**
-	 * @param temp
-	 * @return
-	 */
-	private Collection<Integer> getNodeNeighborLessThanK(int[] temp) {
-		Collection<Integer> nodeNeighborLessThanK = new ArrayList<Integer>();
-		for (int currentId : temp) {
-			Integer[] neighbor = getNeighbor(currentId);
-			if (neighbor.length <= k) {
-				nodeNeighborLessThanK.add(currentId);
-			}
-		}
-		return nodeNeighborLessThanK;
-
-	}
 
 	/**
 	 * @param currentID
@@ -609,47 +578,9 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		for (int i = array.length - 1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			controlRequestMessage++;
-			final Integer currentNodeId = (Integer) array[i];
-			final Integer nextNodeId = (Integer) array[i - 1];
-			// if (NEEDPAINTING) {
-			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-			// public void run() {
-			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
-			// nextNodeId,
-			// new RGB(128, 128, 128));
-			// }
-			// });
-			// }
 		}
 	}
 
-	/**
-	 * @param currentID
-	 */
-	private void sendAwakeRequstMessageToAllNeighbors(final Integer currentID) {
-		Integer[] neighborsId = getNeighbor(currentID);
-		// if (NEEDPAINTING) {
-		// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-		// public void run() {
-		// NetTopoApp.getApp().getPainter().paintNode(currentID, new RGB(255,
-		// 127, 80));
-		// }
-		// });
-		// }
-		for (int i = 0; i < neighborsId.length; i++) {
-			broadcastMessage++;
-			final int neighbor = neighborsId[i];
-			hops.put(currentID, hops.get(currentID) + 1);
-			if (NEEDPAINTING) {
-				NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-					public void run() {
-						NetTopoApp.getApp().getPainter().paintConnection(currentID, neighbor,
-								NodeConfiguration.lineConnectPathColor);
-					}
-				});
-			}
-		}
-	}
 
 	/**
 	 * @param controllerID
@@ -820,42 +751,9 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		for (int i = array.length - 1; i > 0; i--) {
 			hops.put(array[i], hops.get(array[i]) + 1);
 			extraMessage++;
-			final Integer currentNodeId = (Integer) array[i];
-			final Integer nextNodeId = (Integer) array[i - 1];
-			// if (NEEDPAINTING) {
-			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-			// public void run() {
-			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
-			// nextNodeId,
-			// new RGB(128, 128, 128));
-			// }
-			// });
-			// }
 		}
 	}
 
-	/**
-	 * @param nodeAfterFaultLink
-	 */
-	private void informMessage(Integer nodeAfterFaultLink) {
-		final List<Integer> path = routingPath.get(nodeAfterFaultLink);
-		Integer[] array = path.toArray(new Integer[path.size()]);
-		for (int i = array.length - 1; i > 0; i--) {
-			hops.put(array[i], hops.get(array[i]) + 1);
-			informMessage++;
-			final Integer currentNodeId = (Integer) array[i];
-			final Integer nextNodeId = (Integer) array[i - 1];
-			// if (NEEDPAINTING) {
-			// NetTopoApp.getApp().getDisplay().asyncExec(new Runnable() {
-			// public void run() {
-			// NetTopoApp.getApp().getPainter().paintConnection(currentNodeId,
-			// nextNodeId,
-			// new RGB(128, 128, 128));
-			// }
-			// });
-			// }
-		}
-	}
 
 	/**
 	 * 初始化工作
@@ -916,20 +814,6 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		return result.toArray(new Integer[result.size()]);
 	}
 
-	/**
-	 * @param temp
-	 * @return
-	 */
-	private Collection<Integer> getNodeNeighborGreaterThank(int[] temp) {
-		Collection<Integer> nodeNeighborGreaterThanK = new ArrayList<Integer>();
-		for (int currentId : temp) {
-			Integer[] neighbor = getNeighbor(currentId);
-			if (neighbor.length > k) {
-				nodeNeighborGreaterThanK.add(currentId);
-			}
-		}
-		return nodeNeighborGreaterThanK;
-	}
 
 	/**
 	 * 初始化Header
