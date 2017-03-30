@@ -17,6 +17,7 @@ import org.eclipse.swt.graphics.RGB;
  *
  */
 public class LocalController implements VNode {
+	private static final long serialVersionUID = 1L;
 	private int id;
 	private int bandwidth;
 	private RGB color;

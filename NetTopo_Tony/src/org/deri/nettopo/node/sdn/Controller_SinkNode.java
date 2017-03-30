@@ -14,6 +14,7 @@ import org.eclipse.swt.graphics.RGB;
  *
  */
 public class Controller_SinkNode extends SinkNode {
+	private static final long serialVersionUID = 1L;
 	private HashMap<Integer, Integer[]> neighbors;
 	private HashMap<Integer, Boolean> awakeNodes;		//所有处于工作状态的节点
 

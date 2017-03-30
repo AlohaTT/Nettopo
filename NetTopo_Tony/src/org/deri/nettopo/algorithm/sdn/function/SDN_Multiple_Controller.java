@@ -22,6 +22,7 @@ import org.deri.nettopo.network.WirelessSensorNetwork;
 import org.deri.nettopo.node.NodeConfiguration;
 import org.deri.nettopo.node.SensorNode;
 import org.deri.nettopo.node.SinkNode;
+import org.deri.nettopo.node.VNode;
 import org.deri.nettopo.node.sdn.NeighborTable;
 import org.deri.nettopo.node.sdn.PacketHeader;
 import org.deri.nettopo.node.sdn.SensorNode_SDN;
@@ -63,6 +64,7 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 	private int extraMessage;
 	private HashMap<Integer, List<Integer>> cluster;
 	private HashMap<Integer, Integer> nearestController;
+	private HashMap<Integer, ArrayList<Integer>> nodeInGas;
 
 	public SDN_Multiple_Controller(Algorithm algorithm) {
 		this.algorithm = algorithm;
@@ -79,6 +81,7 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		linkFaultRatio = 0.05;
 		cluster = new HashMap<Integer, List<Integer>>();
 		nearestController = new HashMap<Integer, Integer>();
+		nodeInGas = new HashMap<>();
 	}
 
 	public SDN_Multiple_Controller() {
@@ -246,6 +249,23 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 		}
 		return neighbor.toArray(new Integer[neighbor.size()]);
 	}
+	
+	/**
+	 * 获取gas中的节点
+	 */
+	private ArrayList<Integer> getNodesInGas(int id) {
+		int[] ids = wsn.getAllSensorNodesID();
+		ArrayList<Integer> neighbor = new ArrayList<Integer>();
+		int maxTR = Integer.parseInt(wsn.getGasByID(id).getAttrValue("Radius"));
+		Coordinate coordinate = wsn.getCoordianteByID(id);
+		for (int i = 0; i < ids.length; i++) {
+			Coordinate tempCoordinate = wsn.getCoordianteByID(ids[i]);
+			if (ids[i] != id && Coordinate.isInCircle(tempCoordinate, coordinate, maxTR)) {
+				neighbor.add(new Integer(ids[i]));
+			}
+		}
+		return neighbor;
+	}
 
 	private void initializeWork() {
 		app = NetTopoApp.getApp();
@@ -388,15 +408,20 @@ public class SDN_Multiple_Controller implements AlgorFunc {
 	private void SDN_Function() {
 		initialWork();
 		// 连接所有的邻居节点
-		connectAllNeighbors();
+//		connectAllNeighbors();
 		int globalController = wsn.getGlobaControllerId()[0];
 		allLocalControllerID = wsn.getLocalControllerId();
+		int[] allGasID = wsn.getAllGasID();
 		int[] allSensorNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllSensorNodesID());// 获得所有sensornode的
 		int[] allNodesID = Util.generateDisorderedIntArrayWithExistingArray(wsn.getAllNodesID());// 获得所有sensornode的
 		sensorNodesChooseLocalController(allSensorNodesID, allLocalControllerID);
 		cknFunction();
 		globalControllerSendMessage();
 		localControllerSendMessage();
+		for (int gasID : allGasID) {
+			nodeInGas.put(gasID, getNodesInGas(gasID));
+		}
+		System.out.println();
 	}
 
 	/**
